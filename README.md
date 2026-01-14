@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/rashomon-banner.jpg" width="600" alt="Rashomon">
+  <img src="rashomon/assets/rashomon-banner.jpg" width="600" alt="Rashomon">
 </p>
 
 <p align="center">
@@ -225,11 +225,9 @@ rashomon learns from your project over time.
 If rashomon exits unexpectedly, temporary directories might remain:
 
 ```bash
-# Clean up all
-./skills/worktree-execution/scripts/worktree-cleanup.sh
-
-# Clean up only old ones (>1 hour)
-./skills/worktree-execution/scripts/worktree-cleanup.sh --orphans
+# Worktrees are stored in system temp directory
+# Clean up manually if needed:
+rm -rf ${TMPDIR:-/tmp}/worktree-rashomon-*
 ```
 
 ### Timeout issues

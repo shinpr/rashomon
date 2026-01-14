@@ -1,10 +1,11 @@
 {
-  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "rashomon",
   "description": "Prompt comparison and optimization learning plugin for Claude Code",
   "owner": {
-    "name": "shinpr",
-    "email": ""
+    "name": "shinpr"
+  },
+  "metadata": {
+    "description": "Prompt comparison and optimization learning plugin for Claude Code"
   },
   "plugins": [
     {
@@ -14,7 +15,7 @@
       "author": {
         "name": "shinpr"
       },
-      "source": ".",
+      "source": "./rashomon",
       "category": "learning",
       "homepage": "https://github.com/shinpr/rashomon"
     }
