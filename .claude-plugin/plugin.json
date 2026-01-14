@@ -1,0 +1,16 @@
+{
+  "name": "rashomon",
+  "description": "Compare original and optimized prompts by parallel execution in git worktrees and generate comparison reports to facilitate prompt engineering learning",
+  "version": "0.1.0",
+  "author": {
+    "name": "Rashomon Project"
+  },
+  "keywords": [
+    "prompt-engineering",
+    "comparison",
+    "optimization",
+    "learning",
+    "rashomon"
+  ],
+  "license": "MIT"
+}

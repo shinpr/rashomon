@@ -1,0 +1,349 @@
+# Prompt Optimization Patterns
+# Based on 2025-2026 prompt engineering research
+# Model-agnostic patterns only
+
+patterns:
+  # P1: Critical (Must Fix)
+
+  - id: BP-001
+    name: Negative Instructions
+    severity: P1
+
+    what_to_look_for: |
+      Look for instructions telling the LLM what NOT to do:
+      - "don't", "do not", "never"
+      - "avoid", "without"
+      - "refrain from", "exclude"
+
+      Examples:
+      - "Don't include personal opinions"
+      - "Avoid technical jargon"
+      - "Never use bullet points"
+
+    why_problematic: |
+      Known as the "Pink Elephant Problem" - telling someone "don't think of a
+      pink elephant" makes them think of it. LLM attention mechanisms similarly
+      focus on negated content, increasing the probability of producing what
+      was forbidden.
+
+      Research: ArXiv studies show 75% failure rate for negative instructions.
+
+    improvement: |
+      Reframe negative instructions as positive ones with equivalent meaning.
+
+      Examples:
+      - "Don't include opinions" -> "Include only factual, verifiable information"
+      - "Avoid jargon" -> "Use plain language accessible to general audience"
+      - "Never use bullet points" -> "Use numbered lists or prose paragraphs"
+
+    examples:
+      bad:
+        - "Don't make the code too complex"
+        - "Avoid using deprecated APIs"
+        - "Don't forget error handling"
+      good:
+        - "Write simple, readable code with clear variable names"
+        - "Use only current, supported APIs from the latest documentation"
+        - "Include comprehensive error handling for all failure cases"
+
+  - id: BP-002
+    name: Vague Instructions
+    severity: P1
+
+    what_to_look_for: |
+      Look for prompts lacking specificity in:
+      - Output format (JSON? Markdown? Plain text?)
+      - Length/scope ("summarize" without word count)
+      - Boundaries (what to include/exclude)
+      - Tone/style (formal? casual? technical?)
+      - Success criteria (how to know if done correctly)
+
+    why_problematic: |
+      Vague instructions are the #1 cause of prompt failure. They create high
+      variance in outputs as the LLM must guess unstated requirements.
+
+      Research: Accounts for approximately 40% of performance variance between
+      prompt versions.
+
+    improvement: |
+      Add explicit constraints for all ambiguous aspects:
+
+      - Format: "Output as JSON with keys: name, description, priority"
+      - Length: "Maximum 200 words" or "3-5 bullet points"
+      - Scope: "Focus only on authentication, exclude authorization"
+      - Tone: "Professional tone suitable for technical documentation"
+
+    examples:
+      bad:
+        - "Summarize this article"
+        - "Write some code for this"
+        - "Explain the concept"
+      good:
+        - "Summarize this article in 3 bullet points, max 50 words each"
+        - "Write a Python function with type hints and docstring"
+        - "Explain the concept in 2 paragraphs for a junior developer audience"
+
+  - id: BP-003
+    name: Missing Output Format
+    severity: P1
+
+    what_to_look_for: |
+      Check if the prompt specifies:
+      - Expected structure (sections, fields, hierarchy)
+      - Data format (JSON, YAML, Markdown, etc.)
+      - Example of desired output
+
+    why_problematic: |
+      Without format specification, outputs are inconsistent and harder to parse.
+      Structured output requirements also reduce hallucination by constraining
+      the output space.
+
+    improvement: |
+      Explicitly define output format:
+
+      - For data: Provide JSON schema or example
+      - For prose: Specify section headers
+      - For lists: Indicate numbering style and item format
+
+      Example addition:
+      "Output format:
+      ```json
+      {
+        \"summary\": \"...\",
+        \"key_points\": [\"...\"],
+        \"recommendation\": \"...\"
+      }
+      ```"
+
+    examples:
+      bad:
+        - "Analyze this code and give feedback"
+        - "List the pros and cons"
+      good:
+        - |
+          Analyze this code and provide feedback in this format:
+          ## Issues Found
+          - [severity] description
+          ## Suggestions
+          - suggestion with code example
+        - |
+          List pros and cons as:
+          | Aspect | Pros | Cons |
+          |--------|------|------|
+
+  # P2: High Impact (Should Fix)
+
+  - id: BP-004
+    name: Unstructured Prompt
+    severity: P2
+
+    what_to_look_for: |
+      Look for prompts that are:
+      - One continuous block of text
+      - No section headers or separators
+      - No Markdown formatting
+      - Multiple topics mixed without organization
+
+    why_problematic: |
+      Research confirms "Structure > Length" - a well-structured short prompt
+      outperforms a long unstructured one. Structure helps the LLM identify
+      priorities and relationships between instructions.
+
+    improvement: |
+      Apply the 4-block pattern:
+
+      ## Context
+      [Background, purpose, audience]
+
+      ## Task
+      [What to accomplish]
+
+      ## Constraints
+      [Limitations, requirements, boundaries]
+
+      ## Output Format
+      [Expected structure of response]
+
+    conditional_application: |
+      Apply IF:
+      - Prompt longer than 3 sentences
+      - Contains multiple distinct instructions
+      - Has implicit section boundaries
+
+      Skip when:
+      - Single simple instruction
+      - Already clearly structured
+      - Structure would add unnecessary verbosity
+
+    examples:
+      bad:
+        - "I need you to write a function that sorts an array and it should handle edge cases like empty arrays and arrays with one element and also it should be efficient and work with both numbers and strings and output should include the function and some test cases"
+      good:
+        - |
+          ## Context
+          Building a utility library for array operations.
+
+          ## Task
+          Write a sort function for arrays.
+
+          ## Constraints
+          - Handle edge cases: empty arrays, single element
+          - Support both numbers and strings
+          - Optimize for performance
+
+          ## Output Format
+          - Function with docstring
+          - 3 test cases demonstrating edge cases
+
+  - id: BP-005
+    name: Missing Context
+    severity: P2
+
+    what_to_look_for: |
+      Check if the prompt provides:
+      - Purpose/goal of the task
+      - Target audience
+      - Usage context
+      - Relevant background information
+      - Definition of domain-specific terms
+
+    why_problematic: |
+      Research confirms "more context = higher accuracy". Without context, LLMs
+      make assumptions that may not match the user's actual needs.
+
+    improvement: |
+      Add context section explaining:
+      - Why this task is needed
+      - Who will use the output
+      - What constraints exist in the environment
+      - Any relevant prior decisions or existing code
+
+    examples:
+      bad:
+        - "Write a login function"
+      good:
+        - |
+          ## Context
+          Building a REST API for a mobile banking app. Security is critical.
+          We use JWT tokens and have existing middleware for rate limiting.
+
+          ## Task
+          Write a login function that validates credentials and returns a token.
+
+  - id: BP-006
+    name: Complex Task Without Decomposition
+    severity: P2
+
+    what_to_look_for: |
+      Look for prompts with:
+      - 3+ distinct objectives in one instruction
+      - Sequential dependencies not made explicit
+      - No intermediate checkpoints
+      - Multiple verbs for different actions (analyze AND implement AND test)
+
+    why_problematic: |
+      ICLR 2023 research shows 28% error reduction when complex tasks are
+      decomposed. Single complex instructions have higher failure rates.
+
+    improvement: |
+      Break into evaluable steps with quality checkpoints:
+
+      Instead of: "Analyze, implement, and test the feature"
+
+      Use:
+      "Step 1: Analyze requirements and list acceptance criteria
+       [checkpoint: verify criteria are complete]
+       Step 2: Implement the feature
+       [checkpoint: verify implementation matches criteria]
+       Step 3: Write tests for each criterion"
+
+    key_insight: |
+      The goal is NOT decomposition itself, but creating EVALUABLE GRANULARITY
+      with QUALITY CHECKPOINTS at each step.
+
+    examples:
+      bad:
+        - "Build a user authentication system with registration, login, password reset, and session management"
+      good:
+        - |
+          Build user authentication in these steps:
+
+          1. Design the data model
+             Checkpoint: Verify all required fields are present
+
+          2. Implement registration endpoint
+             Checkpoint: Test with valid and invalid inputs
+
+          3. Implement login endpoint
+             Checkpoint: Verify token generation works
+
+          4. Implement password reset flow
+             Checkpoint: Test email sending and token validation
+
+  # P3: Enhancement (Could Fix)
+
+  - id: BP-007
+    name: Biased Examples
+    severity: P3
+
+    what_to_look_for: |
+      In few-shot prompts, check if examples:
+      - All have the same structure
+      - All represent the same type of case
+      - Lack edge cases or exceptions
+      - Are too similar to each other
+
+    why_problematic: |
+      Research shows 40% of few-shot effectiveness depends on exemplar selection.
+      Homogeneous examples cause the model to overfit to that specific pattern.
+
+    improvement: |
+      Diversify examples to include:
+      - Different structures/formats
+      - Edge cases
+      - Exceptions to the rule
+      - Varying complexity levels
+
+    examples:
+      bad:
+        - |
+          Examples of good commit messages:
+          - "Add user authentication"
+          - "Add payment processing"
+          - "Add email notifications"
+      good:
+        - |
+          Examples of good commit messages:
+          - "Add user authentication" (new feature)
+          - "Fix null pointer in login flow" (bug fix)
+          - "Refactor database queries for performance" (refactoring)
+          - "Update README with setup instructions" (documentation)
+
+  - id: BP-008
+    name: No Uncertainty Permission
+    severity: P3
+
+    what_to_look_for: |
+      Check if the prompt:
+      - Demands an answer regardless of confidence
+      - Has no instruction for handling ambiguity
+      - Implicitly requires certainty
+
+    why_problematic: |
+      Without permission to express uncertainty, LLMs may hallucinate answers
+      rather than admit limitations.
+
+    improvement: |
+      Add explicit uncertainty permission:
+
+      "If you are unsure or the information is ambiguous, please indicate your
+      level of confidence or say 'I'm not certain about this.'"
+
+      Or: "If you cannot determine the answer with confidence, explain what
+      additional information would be needed."
+
+    examples:
+      bad:
+        - "What is the exact cause of this bug?"
+      good:
+        - "What is the likely cause of this bug? If multiple causes are possible, list them with your confidence level for each. If you need more information to determine the cause, specify what would help."

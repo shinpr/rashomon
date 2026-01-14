@@ -1,0 +1,152 @@
+# Execution Quality Evaluation Criteria
+# Used in Step 3 (Balance Adjustment) of the optimization flow
+
+evaluation_criteria:
+
+  # Improvement Classification
+
+  improvement_types:
+    structural:
+      description: |
+        Essential changes to accuracy, completeness, or structure of output.
+        These indicate genuine optimization benefit.
+      indicators:
+        - Output addresses requirements that were missed before
+        - Fewer errors or inaccuracies
+        - Better organized or more complete response
+        - Clearer logic or reasoning
+      weight: high
+
+    expressive:
+      description: |
+        Different phrasing, ordering, or presentation, but equivalent substance.
+        Neutral classification requiring context to evaluate.
+      indicators:
+        - Same information presented differently
+        - Different word choices with same meaning
+        - Reordered sections with same content
+      weight: medium
+
+    variance:
+      description: |
+        Within the probabilistic variance range of LLM output ("jitter").
+        If only variance-level differences exist, the original prompt was sufficient.
+      indicators:
+        - Minor wording differences
+        - Slightly different examples (but equivalent quality)
+        - Different formatting choices (when not specified)
+      weight: ignore
+
+  # Quality Checkpoints for Step 3
+
+  balance_checks:
+
+    over_optimization:
+      description: Check if optimization added too many constraints
+      warning_signs:
+        - Prompt length increased by more than 50%
+        - Added constraints that limit valid solutions unnecessarily
+        - Made prompt overly prescriptive when flexibility was acceptable
+        - Added structure to a naturally simple task
+      action: Consider removing low-value additions
+
+    lost_aspects:
+      description: Check if optimization removed important elements
+      warning_signs:
+        - Original intent became unclear
+        - Important context was compressed away
+        - Nuance was lost in simplification
+        - Edge cases are no longer addressed
+      action: Restore critical elements while maintaining improvements
+
+    clarity_trade_off:
+      description: Verify improvements didn't reduce clarity
+      warning_signs:
+        - More structured but harder to read
+        - Technical improvements that obscure the main point
+        - Format requirements that distract from content
+      action: Simplify while preserving key improvements
+
+  # Comparison Evaluation
+
+  comparison_criteria:
+
+    effectiveness:
+      question: "Did the optimization lead to a better outcome?"
+      evaluation:
+        - Compare actual outputs, not just prompt structure
+        - Focus on task completion quality
+        - Consider edge case handling
+      scoring:
+        much_better: "Clear structural improvement in output"
+        somewhat_better: "Minor improvements visible"
+        equivalent: "No meaningful difference (variance-level)"
+        worse: "Original output was actually better"
+
+    efficiency:
+      question: "Was the optimization cost-effective?"
+      evaluation:
+        - Prompt complexity vs output improvement
+        - Time/token cost of longer prompts
+        - Maintenance burden of complex prompts
+      note: "A simple prompt that works is better than a complex prompt that works slightly better"
+
+    applicability:
+      question: "Is this improvement generalizable?"
+      evaluation:
+        - Would this improvement help similar prompts?
+        - Is it project-specific or universal?
+        - Should it be added to knowledge base?
+
+  # Knowledge Extraction Criteria
+
+  knowledge_extraction:
+
+    save_as_pattern:
+      conditions:
+        - Optimized prompt showed clear structural improvement
+        - Improvement is project-specific (not explained by BP-001~008)
+        - Pattern is likely to recur in this project
+      confidence_guidance:
+        "0.8+": "Multiple comparisons confirmed same pattern"
+        "0.5-0.7": "Single comparison showed clear effect"
+        "<0.5": "Effect present but uncertain; consider not saving"
+
+    save_as_anti_pattern:
+      conditions:
+        - Original prompt had a problem specific to this project
+        - Problem is not covered by standard patterns (BP-001~008)
+        - Problem is likely to recur
+
+    do_not_save:
+      conditions:
+        - Improvement explained by standard best practices
+        - One-time special case (no recurrence expected)
+        - Effect was unclear or variance-level
+        - Generic advice without project-specific insight
+
+  # Report Generation Guidance
+
+  report_sections:
+
+    executive_summary:
+      focus: "Was there meaningful improvement?"
+      include:
+        - Overall assessment (structural/expressive/variance)
+        - Key learning if any
+        - Recommendation for prompt usage
+
+    comparison_analysis:
+      focus: "What specifically changed and why?"
+      include:
+        - Side-by-side of key differences
+        - Classification of each difference type
+        - Explanation of causation (which optimization led to which improvement)
+
+    learning_points:
+      focus: "What can be learned from this comparison?"
+      include:
+        - Confirmed effective patterns
+        - Patterns that had no effect
+        - Project-specific insights
+        - Recommendations for future prompts
