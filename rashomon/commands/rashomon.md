@@ -126,6 +126,7 @@ Apply the execution quality criteria from the prompt-optimization skill.
 ## Final Output to User
 
 Present report-generator's complete output to user.
+Optimized prompt must appear in full, never summarized.
 
 The report includes (defined in report-generator):
 - Input Prompts (original and optimized full text)
