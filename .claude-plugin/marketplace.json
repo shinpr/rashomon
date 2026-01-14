@@ -1,0 +1,22 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "rashomon",
+  "description": "Prompt comparison and optimization learning plugin for Claude Code",
+  "owner": {
+    "name": "shinpr",
+    "email": ""
+  },
+  "plugins": [
+    {
+      "name": "rashomon",
+      "description": "Compare original and optimized prompts by parallel execution in git worktrees",
+      "version": "1.0.0",
+      "author": {
+        "name": "shinpr"
+      },
+      "source": ".",
+      "category": "learning",
+      "homepage": "https://github.com/shinpr/rashomon"
+    }
+  ]
+}
