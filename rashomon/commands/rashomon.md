@@ -19,7 +19,8 @@ description: Compare original and optimized prompts by parallel execution in git
 
 ## Phase Boundaries
 
-Proceed through all phases continuously. Pause only when the user explicitly requests step-by-step confirmation.
+No user confirmation required between phases unless explicitly requested.
+Each phase must complete all required outputs before proceeding.
 
 ## Input
 
@@ -61,7 +62,7 @@ Output:
 
 ### 3. Worktree Creation
 
-Read worktree-execution skill and execute according to Creation section.
+Execute worktree creation per worktree-execution skill "Creation" section.
 
 ### 4. Parallel Execution
 
@@ -107,7 +108,7 @@ Output:
 
 ### 7. Cleanup
 
-Read worktree-execution skill and execute according to Cleanup section.
+Execute worktree cleanup per worktree-execution skill "Cleanup" section.
 
 ## Improvement Classification
 
@@ -125,7 +126,7 @@ Apply the execution quality criteria from the prompt-optimization skill.
 ## Final Output to User
 
 Present report-generator's complete output to user.
-Optimized prompt must appear in full, never summarized.
+Optimized prompt must appear in full. This is the core learning value of the report.
 
 The report includes (defined in report-generator):
 - Input Prompts (original and optimized full text)
