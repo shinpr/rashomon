@@ -36,15 +36,20 @@ The user provides a natural language request. Pass it directly to prompt-analyze
 
 Register all workflow steps:
 ```
-1. Analyze and optimize prompt
-2. Create git worktrees
-3. Execute prompts in parallel
-4. Generate comparison report
-5. Retrospective (user confirms)
-6. Cleanup worktrees
+1. Load required skills
+2. Analyze and optimize prompt
+3. Setup execution environment
+4. Execute prompts in parallel
+5. Environment cleanup
+6. Generate comparison report
+7. Retrospective
 ```
 
-### 2. Prompt Analysis and Optimization
+### 2. Load Required Skills
+
+Load worktree-execution skill.
+
+### 3. Prompt Analysis and Optimization
 
 **Invoke**: prompt-analyzer agent
 
@@ -60,11 +65,11 @@ Output:
 - [ ] Input contains user's request text only
 - [ ] Output presented to user matches agent's output
 
-### 3. Worktree Creation
+### 4. Execution Environment Setup
 
-Execute worktree creation per worktree-execution skill "Creation" section.
+Execute environment setup per worktree-execution skill "Creation" section.
 
-### 4. Parallel Execution
+### 5. Parallel Execution
 
 **Invoke**: Two prompt-executor agents simultaneously (single message, parallel Task calls)
 
@@ -84,7 +89,11 @@ Each subagent executes the prompt as a development task within its isolated work
 
 **CRITICAL**: Both Task tool calls MUST be in the same message to achieve true parallel execution.
 
-### 5. Report Generation
+### 6. Environment Cleanup
+
+Execute worktree cleanup per worktree-execution skill "Cleanup" section.
+
+### 7. Report Generation
 
 **Invoke**: report-generator agent
 
@@ -100,15 +109,11 @@ Output:
 **Quality Gate**:
 - [ ] Output presented to user matches agent's output
 
-### 6. Retrospective
+### 8. Retrospective
 
 **Trigger**: Report generation completes
 
 **Action**: Ask user for feedback on comparison results, then delegate to knowledge-optimizer agent
-
-### 7. Cleanup
-
-Execute worktree cleanup per worktree-execution skill "Cleanup" section.
 
 ## Improvement Classification
 
