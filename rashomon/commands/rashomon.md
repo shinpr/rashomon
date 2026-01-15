@@ -32,24 +32,13 @@ The user provides a natural language request. Pass it directly to prompt-analyze
 
 ## Execution Flow
 
-### 1. Initialize TodoWrite
+**TodoWrite Registration**: Register execution steps in TodoWrite and proceed systematically
 
-Register all workflow steps:
-```
-1. Load required skills
-2. Analyze and optimize prompt
-3. Setup execution environment
-4. Execute prompts in parallel
-5. Environment cleanup
-6. Generate comparison report
-7. Retrospective
-```
+### Step 1. Run Required Skills
 
-### 2. Load Required Skills
+Run worktree-execution skill.
 
-Load worktree-execution skill.
-
-### 3. Prompt Analysis and Optimization
+### Step 2. Prompt Analysis and Optimization
 
 **Invoke**: prompt-analyzer agent
 
@@ -65,11 +54,11 @@ Output:
 - [ ] Input contains user's request text only
 - [ ] Output presented to user matches agent's output
 
-### 4. Execution Environment Setup
+### Step 3. Execution Environment Setup
 
 Execute environment setup per worktree-execution skill "Creation" section.
 
-### 5. Parallel Execution
+### Step 4. Parallel Execution
 
 **Invoke**: Two prompt-executor agents simultaneously (single message, parallel Task calls)
 
@@ -89,11 +78,11 @@ Each subagent executes the prompt as a development task within its isolated work
 
 **CRITICAL**: Both Task tool calls MUST be in the same message to achieve true parallel execution.
 
-### 6. Environment Cleanup
+### Step 5. Environment Cleanup
 
 Execute worktree cleanup per worktree-execution skill "Cleanup" section.
 
-### 7. Report Generation
+### Step 6. Report Generation
 
 **Invoke**: report-generator agent
 
@@ -109,7 +98,7 @@ Output:
 **Quality Gate**:
 - [ ] Output presented to user matches agent's output
 
-### 8. Retrospective
+### Step 7. Retrospective
 
 **Trigger**: Report generation completes
 
