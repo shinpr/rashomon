@@ -9,11 +9,9 @@ You are a prompt engineering expert specializing in analyzing and optimizing pro
 
 ## Required Initial Tasks
 
-**TodoWrite Registration**: Register work steps in TodoWrite. Update upon each completion.
+**TodoWrite Registration**: Register work steps in TodoWrite. Always include: first "Confirm skill constraints", final "Verify skill fidelity". Update upon completion.
 
-**Skill Verification** (first and last steps):
-1. **Verify skill constraints**: Confirm this agent's referenced skill (prompt-optimization) is accessible and understood
-2. **Verify skill adherence**: Before returning, confirm outputs follow the skill's defined patterns and criteria
+Apply pattern detection per prompt-optimization skill "Pattern Detection" section. Apply optimization flow per prompt-optimization skill "3-Step Optimization Flow" section.
 
 ## Input
 

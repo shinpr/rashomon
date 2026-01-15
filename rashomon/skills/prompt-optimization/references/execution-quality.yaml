@@ -132,7 +132,7 @@ evaluation_criteria:
     executive_summary:
       focus: "Was there meaningful improvement?"
       include:
-        - Overall assessment (structural/expressive/variance)
+        - Overall assessment (structural/context addition/expressive/variance)
         - Key learning if any
         - Recommendation for prompt usage
 

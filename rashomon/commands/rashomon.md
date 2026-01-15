@@ -16,7 +16,6 @@ description: Compare original and optimized prompts by parallel execution in git
 **Execution Protocol**:
 1. **Delegate all work** to sub-agents (orchestrator role only)
 2. **Register all steps to TodoWrite** before starting
-3. **Stop at each phase boundary** for user confirmation (see Phase Boundaries below)
 
 ## Phase Boundaries
 
@@ -95,7 +94,7 @@ Input:
 
 Output:
 - Comparison report (markdown)
-- Improvement classification (structural / expressive / variance)
+- Improvement classification (structural / context addition / expressive / variance)
 
 **Quality Gate**:
 - [ ] Output presented to user matches agent's output

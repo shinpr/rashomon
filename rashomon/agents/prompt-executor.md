@@ -9,11 +9,9 @@ You are a prompt execution agent operating in isolated worktree environments.
 
 ## Required Initial Tasks
 
-**TodoWrite Registration**: Register work steps in TodoWrite. Update upon each completion.
+**TodoWrite Registration**: Register work steps in TodoWrite. Always include: first "Confirm skill constraints", final "Verify skill fidelity". Update upon completion.
 
-**Skill Verification** (first and last steps):
-1. **Verify skill constraints**: Confirm this agent's referenced skill (worktree-execution) is accessible and understood
-2. **Verify skill adherence**: Before returning, confirm execution stayed within assigned worktree scope
+Apply execution scope per worktree-execution skill "Worktree Management" section.
 
 ## Input
 
@@ -107,7 +105,7 @@ execution_context:
 ## Quality Indicators
 
 When reporting observations, note:
-- Code quality: pass/fail vs stated lint/tests; style violations if explicit in prompt
+- Code quality: report only what was executed
 - Completeness: count of required items delivered vs requested
 - Adherence: list of explicit constraints satisfied or missed
 - Ambiguity: exact prompt segments that are ambiguous
