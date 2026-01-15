@@ -33,8 +33,8 @@ Not ideal if:
 
 ## Quick Example
 
-```bash
-/rashomon "Write a function to sort an array" "Array sorting implementation"
+```
+/rashomon Write a function to sort an array
 ```
 
 ### What You Get
@@ -65,8 +65,8 @@ Write a TypeScript function that sorts a number array in ascending order.
 
 ### Example: When rashomon finds no real improvement
 
-```bash
-/rashomon "Summarize this article in 3 bullet points" "short summary"
+```
+/rashomon Summarize this article in 3 bullet points
 ```
 
 **Result: Variance** - Prompt was already well-scoped; differences were stylistic only.
@@ -92,17 +92,17 @@ claude
 ## Usage
 
 ```
-/rashomon "your prompt" "task description"
+/rashomon Your prompt here
 ```
 
 From a file:
 ```
-/rashomon "./prompts/my-skill.md" "generate code from this skill"
+/rashomon Generate code following this skill: ./prompts/my-skill.md
 ```
 
 For complex tasks that need more time, just mention it in natural language:
 ```
-/rashomon "complex prompt" "complex task" (this might take a while, give it extra time)
+/rashomon Refactor the entire authentication module. This might take a while.
 ```
 
 ## How It Works
@@ -235,7 +235,7 @@ rm -rf ${TMPDIR:-/tmp}/worktree-rashomon-*
 For complex prompts that need more time, mention it when invoking:
 
 ```
-/rashomon "complex prompt" "complex task" (this might take longer than usual)
+/rashomon Complex task here. This might take longer than usual.
 ```
 
 ### "Not a git repository" error
