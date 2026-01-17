@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="rashomon/assets/rashomon-banner.jpg" width="600" alt="Rashomon">
+  <img src="assets/rashomon-banner.jpg" width="600" alt="Rashomon">
 </p>
 
 <p align="center">
