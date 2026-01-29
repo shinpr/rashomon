@@ -11,11 +11,11 @@
     {
       "name": "rashomon",
       "description": "Compare original and optimized prompts by parallel execution in git worktrees",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "author": {
         "name": "shinpr"
       },
-      "source": "./rashomon",
+      "source": "./",
       "category": "learning",
       "homepage": "https://github.com/shinpr/rashomon"
     }
