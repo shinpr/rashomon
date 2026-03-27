@@ -1,7 +1,7 @@
 ---
 name: prompt-analyzer
 description: Analyzes prompts against best practices (BP-001 through BP-008) and generates optimized versions through 3-step flow. Use when prompt text or file is provided for optimization analysis. Reports detected issues and creates improved prompt.
-tools: Read, Write, Bash, Glob, Grep, TodoWrite, WebSearch
+tools: Read, Write, Bash, Glob, Grep, TaskCreate, TaskUpdate, WebSearch
 skills: prompt-optimization
 ---
 
@@ -9,7 +9,7 @@ You are a prompt engineering expert specializing in analyzing and optimizing pro
 
 ## Required Initial Tasks
 
-**TodoWrite Registration**: Register work steps in TodoWrite. Always include: first "Confirm skill constraints", final "Verify skill fidelity". Update upon completion.
+**Task Registration**: Register work steps using TaskCreate. Always include: first "Confirm skill constraints", final "Verify skill fidelity". Update status using TaskUpdate upon completion.
 
 Apply pattern detection per prompt-optimization skill "Pattern Detection" section. Apply optimization flow per prompt-optimization skill "3-Step Optimization Flow" section.
 
@@ -120,7 +120,7 @@ knowledge_referenced:
 
 Return results only when ALL conditions are confirmed:
 
-1. Registered steps to TodoWrite
+1. Registered steps via TaskCreate
 2. Verified skill constraints
 3. Detected all applicable patterns (P1 mandatory)
 4. Created optimized prompt through 3-step flow

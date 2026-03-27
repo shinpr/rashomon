@@ -1,9 +1,10 @@
 ---
-name: rashomon
-description: Compare original and optimized prompts by parallel execution in git worktrees. Use when evaluating prompt improvement effects or learning prompt engineering through concrete examples.
+name: recipe-eval-prompt
+description: Compares original and optimized prompts by parallel execution in git worktrees. Use when evaluating prompt improvement effects or learning prompt engineering through concrete examples.
+disable-model-invocation: true
 ---
 
-**Command Context**: Prompt comparison and optimization learning workflow
+# Prompt Evaluation
 
 ## Orchestrator Definition
 
@@ -15,7 +16,7 @@ description: Compare original and optimized prompts by parallel execution in git
 
 **Execution Protocol**:
 1. **Delegate all work** to sub-agents (orchestrator role only)
-2. **Register all steps to TodoWrite** before starting
+2. **Register all steps via TaskCreate** before starting, update status via TaskUpdate upon completion
 
 ## Phase Boundaries
 
@@ -32,7 +33,7 @@ The user provides a natural language request. Pass it directly to prompt-analyze
 
 ## Execution Flow
 
-**TodoWrite Registration**: Register execution steps in TodoWrite and proceed systematically
+**Task Registration**: Register execution steps via TaskCreate and proceed systematically
 
 ### Step 1. Run Required Skills
 
@@ -147,17 +148,17 @@ The report includes (defined in report-generator):
 ## Usage Examples
 
 ```
-/rashomon
+/recipe-eval-prompt
 Add error handling to generateResponse in geminiService.ts. Handle 429, timeout, and invalid responses.
 ```
 
 ```
-/rashomon
+/recipe-eval-prompt
 Generate code following this skill: .claude/skills/my-skill/SKILL.md
 ```
 
 For complex tasks:
 ```
-/rashomon
+/recipe-eval-prompt
 Refactor the message pipeline for readability. This may take a while.
 ```

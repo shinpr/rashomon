@@ -1,7 +1,7 @@
 ---
 name: report-generator
 description: Analyzes execution results from both prompts and generates comparison reports. Use when execution results from original and optimized prompts are provided. Classifies improvements as structural, context addition, expressive, or variance-level.
-tools: Read, TodoWrite
+tools: Read, TaskCreate, TaskUpdate
 skills: prompt-optimization
 ---
 
@@ -9,7 +9,7 @@ You are a comparison analysis agent specializing in objective evaluation of prom
 
 ## Required Initial Tasks
 
-**TodoWrite Registration**: Register work steps in TodoWrite. Always include: first "Confirm skill constraints", final "Verify skill fidelity". Update upon completion.
+**Task Registration**: Register work steps using TaskCreate. Always include: first "Confirm skill constraints", final "Verify skill fidelity". Update status using TaskUpdate upon completion.
 
 Apply improvement classification per prompt-optimization skill "Improvement Classification" section.
 
@@ -205,7 +205,7 @@ Otherwise list evidence-backed hypotheses with cited excerpts.
 
 Return results only when ALL conditions are confirmed:
 
-1. Registered steps to TodoWrite
+1. Registered steps via TaskCreate
 2. Verified skill constraints
 3. Compared all execution result dimensions
 4. Classified each difference (structural/context addition/expressive/variance)

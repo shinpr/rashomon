@@ -121,3 +121,4 @@ Reference: `references/execution-quality.yaml` for detailed criteria.
 
 - `references/patterns.yaml` - Detailed pattern definitions
 - `references/execution-quality.yaml` - Quality evaluation criteria
+- `references/skills.md` - Skill-specific optimization (BP adaptation, 9 editing principles, progressive disclosure, grading)

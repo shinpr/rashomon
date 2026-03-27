@@ -7,7 +7,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue" alt="License"></a>
 </p>
 
-**See what actually changes when you improve your prompts — not just different wording.**
+**See what actually changes when you improve your prompts and skills — not just different wording.**
 
 ## Why rashomon?
 
@@ -17,15 +17,17 @@
 - Spending too much time on trial-and-error with prompts?
 - Read best practices but not sure how they apply to your case?
 - Want proof that your changes actually made things better?
+- Building skills but unsure if they improve agent behavior?
 
-**rashomon** analyzes, improves, and compares prompts—so you can see what *actually* changed, and whether it matters.
+**rashomon** analyzes, improves, and compares prompts and skills—so you can see what *actually* changed, and whether it matters.
 
 ### Who Is This For?
 
 rashomon is designed for:
 - Developers using Claude Code daily
 - Teams iterating on complex prompts (coding, analysis, writing)
-- Anyone who wants **evidence**, not vibes, when improving prompts
+- Skill authors who want evidence-based validation
+- Anyone who wants **evidence**, not vibes, when improving prompts and skills
 
 Not ideal if:
 - You don't use git
@@ -33,8 +35,10 @@ Not ideal if:
 
 ## Quick Example
 
+### Prompt Evaluation
+
 ```
-/rashomon Write a function to sort an array
+/recipe-eval-prompt Write a function to sort an array
 ```
 
 ### What You Get
@@ -66,10 +70,24 @@ Write a TypeScript function that sorts a number array in ascending order.
 ### Example: When rashomon finds no real improvement
 
 ```
-/rashomon Summarize this article in 3 bullet points
+/recipe-eval-prompt Summarize this article in 3 bullet points
 ```
 
 **Result: Variance** - Prompt was already well-scoped; differences were stylistic only.
+
+### Skill Evaluation
+
+```
+/recipe-eval-skill I want to create a security review skill
+```
+
+Creates the skill through interactive dialog, then evaluates it by running a test task with and without the skill in parallel, using blind A/B comparison.
+
+```
+/recipe-eval-skill I want to improve BP-003 in prompt-optimization
+```
+
+Updates the skill, then evaluates old vs new version side by side.
 
 ## Installation
 
@@ -92,17 +110,17 @@ claude
 ## Usage
 
 ```
-/rashomon Your prompt here
+/recipe-eval-prompt Your prompt here
 ```
 
 From a file:
 ```
-/rashomon Generate code following this skill: ./prompts/my-skill.md
+/recipe-eval-prompt Generate code following this skill: ./prompts/my-skill.md
 ```
 
 For complex tasks that need more time, just mention it in natural language:
 ```
-/rashomon Refactor the entire authentication module. This might take a while.
+/recipe-eval-prompt Refactor the entire authentication module. This might take a while.
 ```
 
 ## How It Works
@@ -135,10 +153,16 @@ Both prompts run simultaneously via Claude Code subagents, so comparison time is
 ### Architecture
 
 ```
-Main Orchestrator
+Prompt Evaluation (/recipe-eval-prompt)
     ├── prompt-analyzer (analyzes and optimizes)
     ├── prompt-executor ×2 (runs in parallel)
     └── report-generator (compares results)
+
+Skill Evaluation (/recipe-eval-skill)
+    ├── skill-creator (generates/modifies skills)
+    ├── skill-reviewer (grades quality A/B/C)
+    ├── prompt-executor ×2 (runs in parallel)
+    └── skill-eval-reporter (blind A/B comparison)
 ```
 
 </details>
@@ -235,7 +259,7 @@ rm -rf ${TMPDIR:-/tmp}/worktree-rashomon-*
 For complex prompts that need more time, mention it when invoking:
 
 ```
-/rashomon Complex task here. This might take longer than usual.
+/recipe-eval-prompt Complex task here. This might take longer than usual.
 ```
 
 ### "Not a git repository" error

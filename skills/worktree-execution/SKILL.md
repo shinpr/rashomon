@@ -32,19 +32,25 @@ Orchestrator
 **Script**: `scripts/worktree-create.sh`
 
 ```bash
+# Default labels (original/optimized) for prompt eval
 ./scripts/worktree-create.sh [repo_root]
+
+# Custom labels for skill eval
+./scripts/worktree-create.sh [repo_root] baseline with-skill
+./scripts/worktree-create.sh [repo_root] old-version new-version
 ```
 
 **Output** (stdout):
 ```
-/tmp/worktree-rashomon-original-20260114-123456
-/tmp/worktree-rashomon-optimized-20260114-123456
+/tmp/worktree-rashomon-{label_a}-20260114-123456
+/tmp/worktree-rashomon-{label_b}-20260114-123456
 ```
 
 **Properties**:
 - Location: `${TMPDIR:-/tmp}/`
-- Naming: `worktree-rashomon-{type}-{timestamp}`
+- Naming: `worktree-rashomon-{label}-{timestamp}`
 - Branch: Detached HEAD at current commit
+- Labels default to `original` / `optimized` if not specified
 
 ### Cleanup
 
