@@ -39,14 +39,14 @@ Phase A ends with: user-approved skill content (new or modified).
 Read [references/eval.md](references/eval.md) and execute the evaluation protocol.
 
 Phase B consists of:
-1. **Trigger precision**: Does the description fire correctly? (Step 6.5)
+1. **Trigger check**: Does the skill fire for its intended use case? (Step 6.5, 1-shot fresh-context check)
 2. **Execution effectiveness**: Blind A/B comparison of output quality (Steps 7-12)
 
 ### Final Output
 
 Present combined results to user:
 1. **Phase A result**: Skill quality grade (A/B/C from skill-reviewer)
-2. **Phase B trigger**: Trigger rate, false positive rate, precision
+2. **Phase B trigger**: Fired / did not fire
 3. **Phase B execution**: Blind comparison result (from skill-eval-reporter)
 4. **Recommendation**: ship / revise / reject
 

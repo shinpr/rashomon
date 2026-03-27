@@ -76,7 +76,6 @@ Loaded on-demand during execution, only when the agent reaches the relevant step
 
 **References** (`references/`):
 - One level deep from SKILL.md only (no nested reference chains)
-- Files over 100 lines include a Table of Contents at the top
 - SKILL.md over 400 lines must be split; extract large tables, examples, detailed criteria
 - Content types: templates, schemas, pattern libraries, checklists, detailed criteria
 

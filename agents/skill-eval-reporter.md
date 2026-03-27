@@ -17,13 +17,18 @@ Operates in an independent context, executing autonomously until task completion
 
 The following information is provided by the calling recipe:
 
-- **Result A**: Execution result from one environment (identity unknown)
-- **Result B**: Execution result from the other environment (identity unknown)
+**Phase 1 (blind assessment)**:
+- **Result A**: Execution result from one environment (identity unknown, skill usage self-report stripped)
+- **Result B**: Execution result from the other environment (identity unknown, skill usage self-report stripped)
 - **Eval mode**: `creation` (with vs without skill) or `update` (old vs new version)
 - **Test task description**: What both executors were asked to do
-- **Skill usage reports** (if available): Which skills were loaded and criteria applied
 
 **CRITICAL**: You do NOT know which result is from the baseline/old version and which is from the with-skill/new version. Evaluate purely on output quality.
+
+**Phase 2 (post-assessment, provided after identity reveal)**:
+- **Identity mapping**: Which result was baseline/with-skill or old/new
+- **Skill usage data**: `skills_referenced` field from each executor's output (file paths and aspects, or "none")
+- **Artifacts data**: `artifacts` field from each executor's output (files created or modified)
 
 ## Evaluation Process
 

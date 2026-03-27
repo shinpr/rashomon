@@ -10,7 +10,7 @@ Steps for creating a new skill through interactive dialog and optimization.
 
 ## Step 2: Collect Skill Knowledge
 
-Collect information in 3 rounds of dialog.
+Collect information in 3 rounds of dialog. Use **AskUserQuestion** tool for all questions to ensure consistent UX.
 
 **Round 1: Skill Essence**
 - What domain knowledge does this skill encode? (1-2 sentences)
@@ -37,7 +37,7 @@ Collect information in 3 rounds of dialog.
 1. Derive skill name in gerund/noun form:
    - Examples: `coding-standards`, `typescript-rules`, `implementation-approach`
 2. Estimate size based on collected content volume
-3. Present name and structure to user for confirmation
+3. Present name and structure to user for confirmation (use AskUserQuestion)
 
 ## Step 4: Generate Skill Content
 
@@ -70,6 +70,8 @@ Input:
   reviewMode: creation
 ```
 
+**Present reviewer output to user**: Display the grade, patternIssues, principlesEvaluation, and actionItems so the user can see the quality assessment.
+
 **Decision logic**:
 - Grade A or B → proceed to Step 6
 - Grade C → re-invoke skill-creator with reviewer's `actionItems` and `patternIssues` appended as additional context (max 2 iterations)
@@ -77,13 +79,14 @@ Input:
 
 ## Step 6: User Review and Write
 
-1. Present generated SKILL.md content to user for final approval
-2. Ask: "Does this skill capture the knowledge and criteria you described?"
-3. If revision requested: collect specific feedback, re-run Step 4 with adjustments
-4. Upon approval, write to target location:
+1. Display the complete SKILL.md content in a fenced code block — the full frontmatter and body, not a summary
+2. If references/ files were generated, display each file's content in separate fenced code blocks
+3. Use AskUserQuestion: "Please review the skill content above. Is there anything you'd like to change?"
+4. If revision requested: collect specific feedback, re-run Step 4 with adjustments
+5. Upon approval, write to target location:
    - Default: `.claude/skills/{name}/SKILL.md`
    - If references exist: `.claude/skills/{name}/references/` for extracted files
-5. If reviewer noted remaining B-grade items, present them as optional future improvements
+6. If reviewer noted remaining B-grade items, present them as optional future improvements
 
 **Phase A complete. Proceed to eval.md for Phase B.**
 

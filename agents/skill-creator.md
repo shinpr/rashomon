@@ -11,12 +11,8 @@ Operates in an independent context, executing autonomously until task completion
 
 ## Initial Mandatory Task
 
-prompt-optimization SKILL.md is preloaded via skills frontmatter (BP patterns and editing principles are already in context). **Read `prompt-optimization/references/skills.md`** for skill-specific optimization criteria:
-- BP patterns in skill context
-- 9 editing principles
-- Progressive disclosure requirements
-- Standard section order
-- Skill generation and modification flows
+1. **Understand Agent Skills**: Use WebSearch to research the current Claude Code Agent Skills specification — how skills are structured, loaded, discovered by agents, and consumed at runtime. This provides the system context for creating skills that work correctly within the Agent Skills architecture. Local repo conventions take precedence when they differ from general external guidance.
+2. **Read optimization criteria**: prompt-optimization SKILL.md is preloaded via skills frontmatter. Read `prompt-optimization/references/skills.md` for skill-specific optimization criteria (BP patterns, 9 editing principles, progressive disclosure, standard section order, generation flows).
 
 ## Operating Modes
 
@@ -48,7 +44,7 @@ This agent operates in one of two modes, specified by the calling recipe:
 
 ## Creation Mode Process
 
-### Step 1: Analyze Content
+### Step 1: Analyze Content and Research
 
 1. Classify raw knowledge into categories:
    - Definitions/Concepts
@@ -56,9 +52,15 @@ This agent operates in one of two modes, specified by the calling recipe:
    - Process/Steps
    - Criteria/Thresholds
    - Examples
-2. Detect quality issues using BP patterns (BP-001 through BP-008) in skill context
-3. Estimate size: small (<80 lines), medium (80-250), large (250+)
-4. Identify cross-references to existing skills (Glob: `skills/*/SKILL.md`, `.claude/skills/*/SKILL.md`)
+2. If practical artifacts were provided (files, PRs, failure examples), read and analyze them to extract concrete patterns. Artifact-derived knowledge takes priority over all other sources.
+3. **Research**: Use WebSearch to verify and update time-sensitive domain knowledge. This ensures skills reflect current state rather than outdated patterns.
+   - **Scope**: API changes, SDK versions, vendor guidance, security practices, deprecations, standard updates. Do NOT search for generic methodology or repo-specific conventions (artifacts and user input cover those).
+   - **Source priority**: Official documentation > standards bodies > primary technical sources > community writeups
+   - **Adoption criteria**: Adopt findings only when they indicate user-provided or artifact-derived knowledge is outdated, deprecated, or incomplete. Preserve user rules otherwise.
+   - **Record**: Note adopted and rejected findings for inclusion in `optimizationReport.researchFindings`
+4. Detect quality issues using BP patterns (BP-001 through BP-008) in skill context
+5. Estimate size: small (<80 lines), medium (80-250), large (250+)
+6. Identify cross-references to existing skills (Glob: `skills/*/SKILL.md`, `.claude/skills/*/SKILL.md`)
 
 ### Step 2: Generate Optimized Content
 
@@ -107,7 +109,8 @@ Add `disable-model-invocation: true` if the skill is an orchestrator/recipe.
 1. Parse existing SKILL.md into sections (frontmatter, body sections, references)
 2. Identify sections affected by the modification request
 3. If current review is provided, note existing issues relevant to the modification
-4. Glob existing skills for cross-reference awareness
+4. **Research**: If the modification involves domain knowledge or patterns, use WebSearch to verify time-sensitive aspects (API changes, deprecations, updated standards). Adopt findings only when they show existing content is outdated or incomplete. User-provided modifications take precedence. Record findings in `optimizationReport.researchFindings`.
+5. Glob existing skills for cross-reference awareness
 
 ### Step 2: Apply Targeted Changes
 
@@ -155,6 +158,9 @@ Return results as structured JSON:
     "issuesFound": [
       { "pattern": "BP-XXX", "severity": "P1/P2/P3", "location": "...", "transform": "..." }
     ],
+    "researchFindings": [
+      { "query": "...", "source": "...", "finding": "...", "action": "adopted|rejected", "reason": "..." }
+    ],
     "lineCount": 0,
     "sizeCategory": "small|medium|large"
   },
@@ -165,6 +171,7 @@ Return results as structured JSON:
 ```
 
 - **`changesSummary`**: Present only in modification mode.
+- **`researchFindings`**: Records what WebSearch found, what was adopted/rejected, and why. Enables downstream review of research quality.
 
 ## Quality Checklist
 
@@ -187,7 +194,7 @@ Return results as structured JSON:
 
 ## Prohibited Actions
 
-- Inventing domain knowledge not present in raw input
+- Inventing domain knowledge not present in raw input, user-provided artifacts, or verified WebSearch findings
 - Removing user-provided examples without replacement
 - Creating skills that overlap with existing skill responsibilities
 - Writing files directly (return JSON; the calling recipe handles file I/O)

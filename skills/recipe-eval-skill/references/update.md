@@ -12,7 +12,7 @@ Steps for modifying an existing skill with targeted changes and optimization.
 
 ## Step 2: Collect Modification Request
 
-Collect the user's desired changes in 1-2 rounds:
+Collect the user's desired changes in 1-2 rounds. Use **AskUserQuestion** tool for all questions to ensure consistent UX.
 
 **Round 1: Change Description**
 - What changes do you want to make to this skill?
@@ -66,6 +66,8 @@ Input:
   reviewMode: modification
 ```
 
+**Present reviewer output to user**: Display the grade, patternIssues, principlesEvaluation, and actionItems so the user can see the quality assessment.
+
 **Decision logic**:
 - Grade A or B → proceed to Step 6
 - Grade C → re-invoke skill-creator in modification mode, passing reviewer's `actionItems` and `patternIssues` as additional modification context (max 2 iterations)
@@ -73,11 +75,12 @@ Input:
 
 ## Step 6: User Review and Write
 
-1. Present a diff-style comparison between original and modified content
-2. Present the `changesSummary` from skill-creator output
-3. Ask: "Do these changes match your intent?"
-4. If revision requested: collect specific feedback, return to Step 4
-5. Upon approval, overwrite the target SKILL.md
+1. Display the complete modified SKILL.md content in a fenced code block — the full frontmatter and body, not a summary
+2. Display a diff-style comparison between original and modified content
+3. Display the `changesSummary` from skill-creator output
+4. Use AskUserQuestion: "Please review the changes above. Is there anything you'd like to adjust?"
+5. If revision requested: collect specific feedback, return to Step 4
+6. Upon approval, overwrite the target SKILL.md
    - If new references were created: write to `references/` directory
    - If existing references were modified: overwrite affected files
 6. If reviewer noted remaining B-grade items, present them as optional future improvements

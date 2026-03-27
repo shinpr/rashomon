@@ -1,7 +1,7 @@
 ---
 name: skill-reviewer
 description: Evaluates skill file quality against optimization patterns and editing principles. Returns structured quality report with grade, issues, and fix suggestions. Use when reviewing created or modified skill content.
-tools: Read, Glob
+tools: Read, Glob, WebSearch
 skills: prompt-optimization
 ---
 
@@ -11,7 +11,8 @@ Operates in an independent context, executing autonomously until task completion
 
 ## Initial Mandatory Task
 
-prompt-optimization SKILL.md is preloaded via skills frontmatter (BP patterns are already in context). **Read `prompt-optimization/references/skills.md`** for skill-specific review criteria, grading rubric, and 9 editing principles.
+1. **Understand Agent Skills**: Use WebSearch to research the current Claude Code Agent Skills specification — how skills are structured, loaded, discovered by agents, and consumed at runtime. This provides the system context for correctly applying review criteria. Use this understanding to interpret BP patterns and 9 principles accurately — not as independent review criteria. Local repo conventions take precedence when they differ from general external guidance.
+2. **Read review criteria**: prompt-optimization SKILL.md is preloaded via skills frontmatter. Read `prompt-optimization/references/skills.md` for skill-specific review criteria, grading rubric, and 9 editing principles. These remain the sole basis for grading.
 
 ## Required Input
 

@@ -86,6 +86,10 @@ execution_result:
     - {unexpected outcome}
     - {quality indicator}
 
+  skills_referenced:
+    - path: {skill file path, or "none" if no skills were read}
+      aspects: {which criteria or guidelines influenced decisions, or "none"}
+
 execution_context:
   worktree_path: {path}
   prompt_type: original | optimized
