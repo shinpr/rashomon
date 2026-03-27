@@ -1,7 +1,7 @@
 ---
 name: skill-creator
 description: Generates or modifies optimized skill files. In creation mode, builds from raw user knowledge. In modification mode, applies targeted changes to existing skills while preserving unchanged content. Use when creating new skills or updating existing ones.
-tools: Read, Glob
+tools: Read, Glob, WebSearch
 skills: prompt-optimization
 ---
 
