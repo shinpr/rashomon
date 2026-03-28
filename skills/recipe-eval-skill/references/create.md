@@ -4,98 +4,144 @@ Steps for creating a new skill through interactive dialog and optimization.
 
 ## Step 1: Pre-flight Check
 
-1. Glob existing skills: `.claude/skills/*/SKILL.md`, `skills/*/SKILL.md`
+1. Glob existing skills: `.claude/skills/*/SKILL.md`, `~/.claude/skills/*/SKILL.md`
 2. If user's topic matches an existing skill name: inform user and confirm whether to proceed or modify existing
 3. List existing skill names for user awareness
 
 ## Step 2: Collect Skill Knowledge
 
-Collect information in 3 rounds of dialog. Use **AskUserQuestion** tool for all questions to ensure consistent UX.
+Collect information through dialog in 5 rounds.
 
-**Round 1: Skill Essence**
-- What domain knowledge does this skill encode? (1-2 sentences)
-- What is the primary goal when this skill is applied? (e.g., "ensure type safety", "standardize test patterns")
+**Dialog method per round**:
 
-**Round 2: Scope and Triggers**
-- When should this skill be activated? List 3-5 concrete scenarios (e.g., "when writing unit tests", "when reviewing PR for security")
-- What does this skill explicitly NOT cover? (scope boundary)
+| Round | Phase | Method |
+|-------|-------|--------|
+| 1-4 | Divergent | Present questions as plain text. Wait for user's free-form response. |
+| 5 | Convergent | Present structured proposal. Use AskUserQuestion for confirmation. |
 
-**Round 3: Decision Criteria and Evidence**
-- What are the concrete rules or criteria? (the core knowledge to encode)
+### Round 1: Skill Essence
+
+Present these questions as plain text and wait for the user's response:
+- What domain knowledge does this skill encode?
+- What is the primary goal when this skill is applied?
+
+### Round 2: Project-Specific Value
+
+Assess whether the proposed skill adds value beyond the LLM's baseline knowledge.
+
+Present these questions as plain text and wait for the user's response:
+- What project-specific rules, patterns, class names, or workflows does this skill encode that the LLM would not know from general training?
+- Provide concrete examples of what project-specific value looks like (e.g., specific error classes, team conventions, file patterns in this codebase)
+
+| User response | Action |
+|---------------|--------|
+| Provides project-specific details | Incorporate into skill content. Proceed to Round 3. |
+| Describes only general knowledge | Inform user that a general-knowledge-only skill is unlikely to trigger at runtime. Offer: (A) identify project-specific aspects to add, (B) proceed with the understanding that the skill may require iteration to trigger. |
+
+### Round 3: Scope, Triggers, and User Phrases
+
+Present these questions as plain text and wait for the user's response:
+- When should this skill be activated? List 3-5 concrete scenarios
+- What does this skill explicitly cover vs. what it leaves out?
+- What phrases does your team actually use when requesting this kind of work? (e.g., "add error handling to X", "review the catch blocks", "fix the retry logic")
+
+After collecting responses, classify each phrase into two categories:
+
+| Category | Definition | Example |
+|----------|-----------|---------|
+| **Skill-dependent** | Cannot be completed correctly without the skill's knowledge; pattern-copying existing code would produce an incorrect or incomplete result | "implement retry logic", "review error handling" |
+| **Pattern-copyable** | Can be completed by reading and copying existing code patterns | "add a fetchXxx function" |
+
+If all phrases are pattern-copyable, inform the user: "These tasks can be completed by copying existing code. Can you provide a scenario that requires the hidden rules this skill encodes?" Ensure at least 1 skill-dependent phrase exists before proceeding.
+
+**Phase B handoff**: Store both categories. Phase B uses these as reference material (not direct input) when generating trigger test queries.
+
+### Round 4: Decision Criteria and Evidence
+
+Present these questions as plain text and wait for the user's response:
+- What are the concrete rules or criteria?
 - Any examples of good/bad patterns?
-- Any external references or standards this skill is based on?
-- **Practical artifacts** (strongly recommended):
-  - Existing implementation files that demonstrate the desired patterns
-  - Past failures or bugs caused by not following these patterns
-  - Related PRs, issues, or runbooks that encode this knowledge
-  - Conversation logs where you've repeatedly explained these rules to others
+- Any external references or standards?
+- Practical artifacts: existing files, past failures, PRs, conversation logs that demonstrate the patterns. "Do you have any existing files, past failures, or documentation that demonstrate these patterns?"
 
-  These artifacts ground the skill in real-world usage rather than abstract rules. Prompt the user: "Do you have any existing files, past failures, or documentation that demonstrate these patterns? Even a single concrete example helps more than abstract rules."
+### Round 5: Confirm Name and Structure
 
-## Step 3: Determine Name and Structure
-
-1. Derive skill name in gerund/noun form:
-   - Examples: `coding-standards`, `typescript-rules`, `implementation-approach`
+1. Derive skill name in gerund/noun form (e.g., `coding-standards`, `typescript-rules`)
 2. Estimate size based on collected content volume
-3. Present name and structure to user for confirmation (use AskUserQuestion)
+3. Present name and structure to user. Use AskUserQuestion for confirmation.
 
-## Step 4: Generate Skill Content
+## Step 3: Generate Skill Content
 
-Invoke **skill-creator** agent in creation mode:
-
-```yaml
-Input:
-  mode: creation
-  skillName: {name from Step 3}
-  rawKnowledge: {content from Round 3}
-  triggerScenarios: {scenarios from Round 2}
-  scope: {coverage and boundaries from Round 2}
-  decisionCriteria: {rules from Round 3}
-  practicalArtifacts: {files, failures, PRs, examples from Round 3, if provided}
+**Agent tool invocation**:
+```
+subagent_type: rashomon:skill-creator
+description: "Generate skill content"
+prompt: |
+  Mode: creation
+  Skill name: {name from Round 5}
+  Raw knowledge: {content from Round 4}
+  Trigger scenarios: {scenarios from Round 3}
+  User phrases: {team phrases from Round 3}
+  Scope: {coverage and boundaries from Round 3}
+  Decision criteria: {rules from Round 4}
+  Practical artifacts: {files, failures, PRs from Round 4, if provided}
+  Project-specific value: {details from Round 2}
 ```
 
-skill-creator reads `prompt-optimization/references/skills.md` and applies:
-- BP-001~008 transforms (P1 > P2 > P3)
-- 9 editing principles
-- Progressive disclosure structure
-- Standard section order
+## Step 4: Review and Fix
 
-## Step 5: Review Generated Content
-
-Invoke **skill-reviewer** agent:
-
-```yaml
-Input:
-  skillContent: {skill-creator output}
-  reviewMode: creation
+**Agent tool invocation**:
 ```
+subagent_type: rashomon:skill-reviewer
+description: "Review created skill"
+prompt: |
+  Review mode: creation
+  Skill content:
+  {skill-creator output assembled as full SKILL.md}
 
-**Present reviewer output to user**: Display the grade, patternIssues, principlesEvaluation, and actionItems so the user can see the quality assessment.
+  Reference files (for Tier 3 evaluation):
+  {for each reference file: filename, line count, and content}
+  {if no references were generated: "No reference files"}
+```
 
 **Decision logic**:
-- Grade A or B → proceed to Step 6
-- Grade C → re-invoke skill-creator with reviewer's `actionItems` and `patternIssues` appended as additional context (max 2 iterations)
+- Grade A → proceed to Step 5
+- Grade B → re-invoke rashomon:skill-creator with reviewer's `actionItems` and `patternIssues` to fix, then re-review (max 2 iterations total)
+- Grade C → re-invoke rashomon:skill-creator with reviewer's `actionItems` and `patternIssues` (max 2 iterations)
 - Grade C after 2 iterations → present current content with issues list, let user decide
 
-## Step 6: User Review and Write
+Present the final grade and any remaining notes to user.
 
-1. Display the complete SKILL.md content in a fenced code block — the full frontmatter and body, not a summary
+## Step 5: User Review and Write
+
+1. Display the complete SKILL.md content in a fenced code block (full frontmatter and body)
 2. If references/ files were generated, display each file's content in separate fenced code blocks
 3. Use AskUserQuestion: "Please review the skill content above. Is there anything you'd like to change?"
-4. If revision requested: collect specific feedback, re-run Step 4 with adjustments
+4. If revision requested: collect specific feedback, re-run Step 3 with adjustments
 5. Upon approval, write to target location:
    - Default: `.claude/skills/{name}/SKILL.md`
-   - If references exist: `.claude/skills/{name}/references/` for extracted files
-6. If reviewer noted remaining B-grade items, present them as optional future improvements
+   - If references exist: `.claude/skills/{name}/references/`
 
 **Phase A complete. Proceed to eval.md for Phase B.**
+
+## Phase B Handoff Data
+
+Phase A must pass the following to Phase B (eval.md). The orchestrator carries these in context:
+
+| Data | Source | Purpose |
+|------|--------|---------|
+| Skill name | Round 5 | `--skill-name` parameter |
+| Source skill directory | Step 5 write location | Worktree copy source |
+| User phrases | Round 3 (both categories) | Reference material for trigger query generation |
+| Trigger scenarios | Round 3 | Reference material for trigger query generation |
 
 ## Completion Criteria
 
 - [ ] No naming conflict with existing skills (or user confirmed override)
-- [ ] Skill knowledge collected through 3 rounds of dialog
+- [ ] Project-specific value validated in Round 2
+- [ ] User phrases collected and classified in Round 3 (at least 1 skill-dependent)
 - [ ] Skill name confirmed by user
-- [ ] skill-creator agent returned valid output
-- [ ] skill-reviewer agent returned grade A or B
+- [ ] rashomon:skill-creator returned valid output
+- [ ] rashomon:skill-reviewer returned grade A (or B issues fixed)
 - [ ] User approved final content
 - [ ] File written to target location

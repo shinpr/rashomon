@@ -49,13 +49,17 @@ For each principle, determine:
 
 Evaluate against 3-tier disclosure requirements from `references/skills.md`:
 
-- **Tier 1**: Description follows trigger guidelines (third-person, verb-first, "Use when:", ~200 chars)
+- **Tier 1**: Apply the description quality checklist from `references/skills.md` Tier 1 section:
+  - Contains project-specific terms that differentiate from general LLM knowledge
+  - Uses phrases users actually say when requesting this work
+  - Focuses on user intent, not skill internals
+  - A description consisting only of general concepts (e.g., "classify errors, fail fast") without project-specific anchors fails Tier 1
 - **Tier 2**: SKILL.md body under 500 lines (ideal: 250), first-screen test passes, standard section order, conditional guards present
-- **Tier 3**: References one level deep, TOC for files over 100 lines, no nested reference chains
+- **Tier 3**: References one level deep, no nested reference chains
 
 ### Step 4: Cross-Skill Consistency Check
 
-1. Glob existing skills: `skills/*/SKILL.md`, `.claude/skills/*/SKILL.md`
+1. Glob existing skills: `.claude/skills/*/SKILL.md`, `~/.claude/skills/*/SKILL.md`
 2. Check for content overlap with existing skills
 3. Verify scope boundaries are explicit
 4. Confirm cross-references where responsibilities border

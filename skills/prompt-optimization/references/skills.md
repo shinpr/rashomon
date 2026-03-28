@@ -41,12 +41,21 @@ Skills implement a 3-tier disclosure architecture. Each tier loads only when nee
 
 Loaded at startup for ALL skills. Shared 15,000-character budget across all loaded skills.
 
+**Core principle**: The description is the agent's trigger mechanism, not a summary for humans. Agents only consult skills for tasks requiring knowledge beyond their baseline capabilities. The description must convey why this skill adds value the agent lacks.
+
 **Requirements**:
 - Third-person, verb-first: "Evaluates X against Y" (NOT "This skill evaluates...")
-- Include "Use when:" trigger with concrete scenarios
+- Focus on user intent, not implementation: describe what the user is trying to achieve, not the skill's internal mechanics
+- Include "Use when:" trigger with concrete scenarios using the actual phrases users say (e.g., "deploy to staging", "add error handling", "review this PR")
+- Explicitly list contexts where the skill applies, including cases where the user does not name the domain directly
 - Target ~200 characters (hard limit: 1024)
-- Template: `{Verb}s {what} against {criteria}. Use when {trigger scenarios}.`
-- Write as trigger, not summary: describe when the skill should fire, not what it contains
+- Template: `{Verb}s {what} using {project-specific criteria/patterns}. Use when {user phrases that trigger this skill}.`
+
+**Description quality checklist**:
+- [ ] Contains project-specific terms, class names, or patterns that differentiate from general LLM knowledge
+- [ ] Uses phrases the team actually says when requesting this kind of work
+- [ ] Focuses on user intent ("when adding...", "when reviewing..."), not skill internals ("classifies errors into...")
+- [ ] A skill covering only general knowledge that the LLM already knows indicates the skill needs project-specific content, or is unnecessary
 
 **Name field**:
 - Max 64 characters, lowercase letters/numbers/hyphens only
@@ -113,12 +122,12 @@ Loaded on-demand during execution, only when the agent reaches the relevant step
 **Step 2: Evaluate and Grade**
 1. Count P1 and P2 issues
 2. Count principles passed (pass/partial/fail)
-3. Check cross-skill overlap (Glob: `skills/*/SKILL.md`, `.claude/skills/*/SKILL.md`)
+3. Check cross-skill overlap (Glob: `.claude/skills/*/SKILL.md`, `~/.claude/skills/*/SKILL.md`)
 4. Balance assessment:
    - Over-optimization: Excessive constraints for simple topic (>250 lines for simple topic)
    - Lost expertise: Domain knowledge compressed away in structured content
    - Clarity trade-off: Structure obscures main point
-   - Description quality: Frontmatter description follows trigger guidelines
+   - Description quality: Apply Tier 1 description quality checklist
 5. Assign grade
 
 ### Review Modes
@@ -136,7 +145,7 @@ Loaded on-demand during execution, only when the agent reaches the relevant step
 
 1. **Analyze**: Classify content (definitions, patterns, processes, criteria, examples). Detect BP issues. Estimate size.
 2. **Generate**: Apply transforms P1 → P2 → P3. Structure per standard section order. Balance check (over-optimization, clarity).
-3. **Description**: Generate per Tier 1 requirements. Template: `{Verb}s {what} against {criteria}. Use when {trigger scenarios}.`
+3. **Description**: Generate per Tier 1 requirements. Use template: `{Verb}s {what} using {project-specific criteria/patterns}. Use when {user phrases}.` Apply description quality checklist.
 4. **Split decision**: If content exceeds 400 lines, extract reference data to `references/`. Keep SKILL.md under 250 lines.
 
 ### Modification Flow

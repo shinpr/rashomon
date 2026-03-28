@@ -4,24 +4,40 @@ description: Creates or updates Claude Code skills through interactive dialog, t
 disable-model-invocation: true
 ---
 
-# Skill Evaluation
+**Context**: Skill authoring (Phase A) followed by blind A/B evaluation (Phase B)
+
+Mode: $ARGUMENTS
 
 ## Orchestrator Definition
 
-**Purpose**: Guide skill creation/update through structured dialog and optimization, then evaluate effectiveness through blind parallel execution comparison.
+**Core Identity**: "I am not a worker. I am an orchestrator."
 
-**Core Identity**: "I manage the workflow between skill authoring and skill evaluation. I route to specialized agents and present results to users."
+**Execution Method**:
+- Skill generation/modification → performed by rashomon:skill-creator
+- Skill quality grading → performed by rashomon:skill-reviewer
+- Test task execution → performed by eval-executor.py script (via `claude -p`)
+- Blind result comparison → performed by rashomon:skill-eval-reporter
 
-**Execution Protocol**:
-1. **Delegate all work** to sub-agents (orchestrator role only)
-2. **Register all steps via TaskCreate** before starting, update status via TaskUpdate upon completion
+Orchestrator invokes sub-agents via Agent tool and scripts via Bash, passes structured data between them.
+
+**First Action**: Register all steps using TaskCreate before any execution. Phase A steps are defined in the mode-specific reference (create.md or update.md). Phase B steps are defined in eval.md. Update status using TaskUpdate upon each step completion.
 
 ## Mode Detection
 
-Determine mode from user input:
+Determine mode from $ARGUMENTS:
 
-- **Creation**: User wants to create a new skill ("作りたい", "create", no existing skill referenced)
-- **Update**: User wants to modify an existing skill ("改善", "update", existing skill name or path mentioned)
+| Mode | Criteria |
+|------|----------|
+| Creation | "create", new skill request, no existing skill referenced |
+| Update | "improve", "update", existing skill name or path mentioned |
+| Unspecified | $ARGUMENTS is empty or ambiguous | Ask user via AskUserQuestion: "Create a new skill or update an existing one?" |
+
+## Scope Boundaries
+
+**Phase A (Skill Authoring)**: Create or modify skill content through dialog. Ends with user-approved skill file.
+**Phase B (Evaluation)**: Measure skill effectiveness through blind execution comparison. Does not modify skill content.
+
+**Responsibility Boundary**: This skill completes with the combined evaluation report and ship/revise/reject recommendation.
 
 ## Workflow
 
@@ -34,30 +50,36 @@ Read the mode-specific reference and execute:
 
 Phase A ends with: user-approved skill content (new or modified).
 
+### Phase A → Phase B Handoff
+
+Before starting Phase B, confirm these data are available in context. Phase B cannot proceed without them:
+
+| Data | Source | Required |
+|------|--------|----------|
+| Skill name | Phase A dialog | Always |
+| Source skill directory | Phase A file write | Always |
+| User phrases | Phase A Round 3 (create) / Round 2 (update) | Always |
+| Trigger scenarios | Phase A Round 3 (create) / Round 1-2 (update) | Always |
+| Original SKILL.md content | Phase A Step 6 (update mode only) | Update mode |
+
+If user phrases are missing, ask the user before proceeding: "What phrases does your team use when requesting work that this skill covers?"
+
 ### Phase B: Evaluation
 
-Read [references/eval.md](references/eval.md) and execute the evaluation protocol.
+Read [references/eval.md](references/eval.md) and execute the evaluation protocol. Pass the handoff data above as context.
 
 Phase B consists of:
-1. **Trigger check**: Does the skill fire for its intended use case? (Step 6.5, 1-shot fresh-context check)
-2. **Execution effectiveness**: Blind A/B comparison of output quality (Steps 7-12)
+1. **Trigger check**: Does the skill fire for its intended use case? (Step 1)
+2. **Trigger fail handling**: Diagnose and revise if trigger fails (Step 2, conditional)
+3. **Execution effectiveness**: Blind A/B comparison of output quality (Steps 3-7)
 
 ### Final Output
 
 Present combined results to user:
-1. **Phase A result**: Skill quality grade (A/B/C from skill-reviewer)
-2. **Phase B trigger**: Fired / did not fire
-3. **Phase B execution**: Blind comparison result (from skill-eval-reporter)
+1. **Phase A result**: Skill quality grade (A/B/C from rashomon:skill-reviewer)
+2. **Phase B trigger**: Discovered (yes/no), Invoked (yes/no)
+3. **Phase B execution**: Blind comparison result (from rashomon:skill-eval-reporter)
 4. **Recommendation**: ship / revise / reject
-
-## Agent Dependencies
-
-| Agent | Used In | Purpose |
-|-------|---------|---------|
-| skill-creator | Phase A | Generate or modify skill content |
-| skill-reviewer | Phase A | Grade skill quality (A/B/C) |
-| prompt-executor | Phase B | Execute test task in worktree |
-| skill-eval-reporter | Phase B | Blind comparison of results |
 
 ## Error Handling
 
@@ -72,17 +94,21 @@ Present combined results to user:
 ## Prerequisites
 
 - Git repository (git 2.5+ for worktree support)
-- Claude Code subagent execution permissions
+- `claude` CLI available in PATH
 - Sufficient disk space for worktree copies
 
-## Usage Examples
+## Completion Criteria
 
-```
-/recipe-eval-skill
-セキュリティレビューのスキルを作りたい
-```
+### Phase A
+- [ ] Skill knowledge collected through dialog
+- [ ] rashomon:skill-creator returned valid output
+- [ ] rashomon:skill-reviewer returned grade A or B
+- [ ] User approved final content
+- [ ] File written to target location
 
-```
-/recipe-eval-skill
-prompt-optimizationのBP-003を改善したい
-```
+### Phase B
+- [ ] Trigger check executed and result presented
+- [ ] Parallel execution completed in worktrees
+- [ ] Blind comparison completed by rashomon:skill-eval-reporter
+- [ ] Worktrees cleaned up
+- [ ] Combined report presented with recommendation

@@ -60,7 +60,7 @@ This agent operates in one of two modes, specified by the calling recipe:
    - **Record**: Note adopted and rejected findings for inclusion in `optimizationReport.researchFindings`
 4. Detect quality issues using BP patterns (BP-001 through BP-008) in skill context
 5. Estimate size: small (<80 lines), medium (80-250), large (250+)
-6. Identify cross-references to existing skills (Glob: `skills/*/SKILL.md`, `.claude/skills/*/SKILL.md`)
+6. Identify cross-references to existing skills (Glob: `.claude/skills/*/SKILL.md`, `~/.claude/skills/*/SKILL.md`)
 
 ### Step 2: Generate Optimized Content
 

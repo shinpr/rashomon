@@ -1,6 +1,5 @@
 {
   "name": "rashomon",
-  "description": "Prompt and skill evaluation plugin for Claude Code",
   "owner": {
     "name": "shinpr"
   },
@@ -10,14 +9,8 @@
   "plugins": [
     {
       "name": "rashomon",
-      "description": "Evaluate prompts and skills through parallel execution comparison in git worktrees",
-      "version": "0.2.0",
-      "author": {
-        "name": "shinpr"
-      },
       "source": "./",
-      "category": "learning",
-      "homepage": "https://github.com/shinpr/rashomon"
+      "description": "Evaluate prompts and skills through parallel execution comparison in git worktrees"
     }
   ]
 }

@@ -19,7 +19,7 @@
 - Want proof that your changes actually made things better?
 - Building skills but unsure if they improve agent behavior?
 
-**rashomon** analyzes, improves, and compares prompts and skills—so you can see what *actually* changed, and whether it matters.
+**rashomon** analyzes, improves, and compares prompts and skills—so you can see what *actually* changed, and whether it matters. Unlike rule-based checks, rashomon evaluates real outputs through blind comparison (without knowing which version produced which output).
 
 ### Who Is This For?
 
@@ -78,16 +78,36 @@ Write a TypeScript function that sorts a number array in ascending order.
 ### Skill Evaluation
 
 ```
-/recipe-eval-skill I want to create a security review skill
+/recipe-eval-skill create
 ```
 
-Creates the skill through interactive dialog, then evaluates it by running a test task with and without the skill in parallel, using blind A/B comparison.
+Creates a skill through interactive dialog, then evaluates effectiveness:
+1. Collects domain knowledge, project-specific rules, and trigger phrases
+2. Generates optimized skill content (graded A/B/C)
+3. Runs a test task with and without the skill in isolated environments, using blind A/B comparison
+
+**What the evaluation report looks like:**
 
 ```
-/recipe-eval-skill I want to improve BP-003 in prompt-optimization
+Skill Quality: Grade A
+- Project-specific rules clearly encoded, no critical issues
+
+Trigger Check: pass (discovered + invoked)
+
+Execution Effectiveness:
+- Winner: with-skill
+- Assessment: structural improvement
+- Key difference: 3-stage catch ordering and retry constraints
+  applied correctly (attributed to skill Rules 3 and 6)
+
+Recommendation: ship
 ```
 
-Updates the skill, then evaluates old vs new version side by side.
+```
+/recipe-eval-skill api-error-handling skill's scope needs adjustment
+```
+
+Updates an existing skill, then evaluates old vs new version side by side.
 
 ## Installation
 
@@ -146,22 +166,18 @@ Comparison Report
 
 rashomon uses **git worktrees** to run both prompts in completely separate environments. A worktree is a Git feature that creates independent working directories from the same repository—this ensures the two executions don't interfere with each other.
 
-### Parallel Execution
-
-Both prompts run simultaneously via Claude Code subagents, so comparison time is roughly the same as a single execution, not double.
-
 ### Architecture
 
 ```
 Prompt Evaluation (/recipe-eval-prompt)
     ├── prompt-analyzer (analyzes and optimizes)
-    ├── prompt-executor ×2 (runs in parallel)
+    ├── prompt-executor ×2 (isolated worktrees)
     └── report-generator (compares results)
 
 Skill Evaluation (/recipe-eval-skill)
     ├── skill-creator (generates/modifies skills)
     ├── skill-reviewer (grades quality A/B/C)
-    ├── prompt-executor ×2 (runs in parallel)
+    ├── eval-executor.py ×2 (isolated worktrees)
     └── skill-eval-reporter (blind A/B comparison)
 ```
 
@@ -207,18 +223,19 @@ rashomon checks for 8 common prompt issues:
 
 ## Improvement Classification
 
-Not all differences are improvements. rashomon classifies results into three categories:
+Not all differences are improvements. rashomon classifies results into four categories:
 
 | Classification | Meaning | Recommendation |
 |---------------|---------|----------------|
-| **Structural** | Real improvement in accuracy, completeness, or quality | Use the optimized prompt |
+| **Structural** | Real improvement in accuracy, completeness, or quality | Use the optimized version |
+| **Context Addition** | One version had more project-specific knowledge | Useful if the context is accurate |
 | **Expressive** | Different wording, same substance | Either version is fine |
-| **Variance** | Just normal LLM randomness | Original prompt was already good |
+| **Variance** | Just normal LLM randomness | Original was already good |
 
 Classification is based on:
 - Whether detected issues (BP patterns) were resolved
 - Output completeness and constraint adherence
-- Consistency across multiple evaluation signals
+- Agreement between blind quality assessment and observable output differences
 
 <details>
 <summary>About Knowledge Base</summary>
@@ -275,6 +292,7 @@ git init
 ## Requirements
 
 - Git 2.5+
+- Python 3.9+
 - Claude Code
 - Must run inside a git repository
 
