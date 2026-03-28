@@ -1,23 +1,16 @@
 {
   "name": "rashomon",
-  "description": "Prompt comparison and optimization learning plugin for Claude Code",
   "owner": {
     "name": "shinpr"
   },
   "metadata": {
-    "description": "Prompt comparison and optimization learning plugin for Claude Code"
+    "description": "Evaluate prompts and skills through parallel execution comparison in git worktrees"
   },
   "plugins": [
     {
       "name": "rashomon",
-      "description": "Compare original and optimized prompts by parallel execution in git worktrees",
-      "version": "0.1.1",
-      "author": {
-        "name": "shinpr"
-      },
       "source": "./",
-      "category": "learning",
-      "homepage": "https://github.com/shinpr/rashomon"
+      "description": "Evaluate prompts and skills through parallel execution comparison in git worktrees"
     }
   ]
 }

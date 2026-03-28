@@ -1,9 +1,13 @@
 #!/bin/bash
 #
 # worktree-create.sh
-# Creates two git worktrees for parallel prompt execution
+# Creates two git worktrees for parallel execution
 #
-# Usage: worktree-create.sh [repo_root]
+# Usage: worktree-create.sh [repo_root] [label_a] [label_b]
+#   repo_root: Repository root path (default: current directory)
+#   label_a:   Label for first worktree (default: original)
+#   label_b:   Label for second worktree (default: optimized)
+#
 # Output: Prints paths of created worktrees (one per line)
 #
 # Exit codes:
@@ -18,6 +22,8 @@ TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 
 # Get repository root (use argument or current directory)
 REPO_ROOT="${1:-$(pwd)}"
+LABEL_A="${2:-original}"
+LABEL_B="${3:-optimized}"
 
 # Verify we're in a git repository
 if ! git -C "$REPO_ROOT" rev-parse --git-dir > /dev/null 2>&1; then
@@ -30,8 +36,8 @@ REPO_ROOT=$(cd "$REPO_ROOT" && git rev-parse --show-toplevel)
 
 # Define paths
 BASE_PATH="${TMPDIR:-/tmp}"
-WORKTREE_ORIGINAL="$BASE_PATH/worktree-rashomon-original-$TIMESTAMP"
-WORKTREE_OPTIMIZED="$BASE_PATH/worktree-rashomon-optimized-$TIMESTAMP"
+WORKTREE_A="$BASE_PATH/worktree-rashomon-${LABEL_A}-$TIMESTAMP"
+WORKTREE_B="$BASE_PATH/worktree-rashomon-${LABEL_B}-$TIMESTAMP"
 
 # Function to create worktree
 create_worktree() {
@@ -51,18 +57,18 @@ create_worktree() {
 # Create both worktrees
 echo "Creating worktrees in $BASE_PATH..." >&2
 
-if ! create_worktree "$WORKTREE_ORIGINAL" "original"; then
+if ! create_worktree "$WORKTREE_A" "$LABEL_A"; then
     exit 2
 fi
 
-if ! create_worktree "$WORKTREE_OPTIMIZED" "optimized"; then
+if ! create_worktree "$WORKTREE_B" "$LABEL_B"; then
     # Cleanup the first worktree if second fails
-    git -C "$REPO_ROOT" worktree remove --force "$WORKTREE_ORIGINAL" 2>/dev/null || true
+    git -C "$REPO_ROOT" worktree remove --force "$WORKTREE_A" 2>/dev/null || true
     exit 2
 fi
 
 # Output the paths (stdout, for capture by caller)
-echo "$WORKTREE_ORIGINAL"
-echo "$WORKTREE_OPTIMIZED"
+echo "$WORKTREE_A"
+echo "$WORKTREE_B"
 
 echo "Worktree creation complete." >&2

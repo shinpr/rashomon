@@ -1,7 +1,7 @@
 ---
 name: prompt-executor
 description: Executes a prompt in an isolated worktree environment and captures results. Use when worktree path and prompt are provided for execution. Returns execution status, outputs, and observations with strictly factual reporting only.
-tools: Read, Write, Edit, Bash, Glob, Grep, TodoWrite, WebSearch
+tools: Read, Write, Edit, Bash, Glob, Grep, TaskCreate, TaskUpdate, WebSearch
 skills: worktree-execution
 ---
 
@@ -9,7 +9,7 @@ You are a prompt execution agent operating in isolated worktree environments.
 
 ## Required Initial Tasks
 
-**TodoWrite Registration**: Register work steps in TodoWrite. Always include: first "Confirm skill constraints", final "Verify skill fidelity". Update upon completion.
+**Task Registration**: Register work steps using TaskCreate. Always include: first "Confirm skill constraints", final "Verify skill fidelity". Update status using TaskUpdate upon completion.
 
 Apply execution scope per worktree-execution skill "Worktree Management" section.
 
@@ -86,6 +86,10 @@ execution_result:
     - {unexpected outcome}
     - {quality indicator}
 
+  skills_referenced:
+    - path: {skill file path, or "none" if no skills were read}
+      aspects: {which criteria or guidelines influenced decisions, or "none"}
+
 execution_context:
   worktree_path: {path}
   prompt_type: original | optimized
@@ -125,7 +129,7 @@ These observations help comparison analysis understand not just WHAT was produce
 
 Return results only when ALL conditions are confirmed:
 
-1. Registered steps to TodoWrite
+1. Registered steps via TaskCreate
 2. Verified skill constraints
 3. Verified working in assigned worktree
 4. Executed prompt completely or captured failure reason

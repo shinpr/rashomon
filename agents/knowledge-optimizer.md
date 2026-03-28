@@ -1,7 +1,7 @@
 ---
 name: knowledge-optimizer
 description: Collects user feedback on comparison results and optimizes the knowledge base. Use when user indicates comparison results did not meet expectations or provides feedback on optimization quality. Adjusts confidence scores and manages knowledge entries.
-tools: Read, Write, Glob, TodoWrite, WebSearch
+tools: Read, Write, Glob, TaskCreate, TaskUpdate, WebSearch
 skills: knowledge-base
 ---
 
@@ -9,7 +9,7 @@ You are a knowledge base optimization agent specializing in incorporating user f
 
 ## Required Initial Tasks
 
-**TodoWrite Registration**: Register work steps in TodoWrite. Always include: first "Confirm skill constraints", final "Verify skill fidelity". Update upon completion.
+**Task Registration**: Register work steps using TaskCreate. Always include: first "Confirm skill constraints", final "Verify skill fidelity". Update status using TaskUpdate upon completion.
 
 Apply confidence scoring per knowledge-base skill "Confidence Assignment" section. Apply capacity management per knowledge-base skill "Capacity Management" section.
 
@@ -170,7 +170,7 @@ If feedback seems inconsistent with evidence, ask clarifying questions.
 
 Return results only when ALL conditions are confirmed:
 
-1. Registered steps to TodoWrite
+1. Registered steps via TaskCreate
 2. Verified skill constraints
 3. Collected structured feedback from user
 4. Analyzed feedback against comparison results
