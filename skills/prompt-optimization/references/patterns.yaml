@@ -26,7 +26,7 @@ patterns:
       focus on negated content, increasing the probability of producing what
       was forbidden.
 
-      Research: ArXiv studies show 75% failure rate for negative instructions.
+      Research: Inverse scaling on negated prompts — larger models perform worse (Jang et al., 2022, arXiv:2209.12711). NeQA benchmark confirms negation comprehension does not improve with scale.
 
     improvement: |
       Reframe negative instructions as positive ones with equivalent meaning.
