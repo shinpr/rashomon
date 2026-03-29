@@ -17,6 +17,17 @@ evaluation_criteria:
         - Clearer logic or reasoning
       weight: high
 
+    context_addition:
+      description: |
+        Project-specific information added from codebase investigation, not from prompt rewriting.
+        Indicates information advantage rather than prompt writing technique.
+      indicators:
+        - Codebase-derived context injected into prompt
+        - Domain-specific terms or constraints added from project knowledge
+        - File paths, API signatures, or architecture details included
+      weight: high
+      note: "Distinguish from structural: context addition is about what information was added, structural is about how the prompt was written."
+
     expressive:
       description: |
         Different phrasing, ordering, or presentation, but equivalent substance.
