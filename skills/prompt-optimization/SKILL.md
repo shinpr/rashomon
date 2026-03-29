@@ -1,6 +1,6 @@
 ---
 name: prompt-optimization
-description: Model-agnostic prompt analysis and optimization patterns based on 2025-2026 research. Use when analyzing prompts for issues or generating optimized versions. Provides 8 patterns (BP-001 through BP-008) and 3-step optimization flow.
+description: Analyzes and optimizes prompts using BP-001~008 patterns and 3-step flow (detect, optimize, balance). Use when "optimize this prompt", "review prompt quality", "analyze prompt issues", or creating/reviewing rashomon skill content.
 ---
 
 # Prompt Optimization Skill
@@ -10,7 +10,7 @@ description: Model-agnostic prompt analysis and optimization patterns based on 2
 1. **Model-Agnostic**: Patterns effective across GPT, Claude, Gemini, etc.
 2. **Evidence-Based**: Based on peer-reviewed research and industry consensus
 3. **Actionable**: Each detection provides specific, implementable improvements
-4. **Non-Destructive**: Suggest improvements while preserving user intent and minimizing constraint creep
+4. **Non-Destructive**: Suggest improvements while preserving user intent and minimizing constraint creep (see `references/execution-quality.yaml` over_optimization criteria)
 
 ## Pattern Detection
 
@@ -60,7 +60,7 @@ Contents:
 
 **Input**: Step 1 analysis
 **Process**:
-- Evaluate precision contribution
+- Classify each improvement as Structural, Context Addition, Expressive, or Variance (see Improvement Classification below). Apply only Structural and Context Addition changes.
 - Consolidate redundant improvements
 - Apply in priority order (P1 > P2 > P3)
 **Output**: `.claude/.rashomon/step2-optimized.md`
@@ -76,10 +76,8 @@ Contents:
 **Process**:
 - Reference `references/execution-quality.yaml`
 - Confirm all critical aspects are preserved
-- Confirm constraints are proportionate
-**Output**: Final optimized prompt
-
-**CRITICAL**: Clean up temporary files after completion.
+- Confirm constraints are proportionate (prompt length increase ≤50%, no constraints that limit valid solutions unnecessarily — see `references/execution-quality.yaml` over_optimization)
+**Output**: Final optimized prompt. Clean up temporary files (`.claude/.rashomon/step1-*.md`, `step2-*.md`) after completion.
 
 ## Conditional Application
 

@@ -66,7 +66,7 @@ This agent operates in one of two modes, specified by the calling recipe:
 
 Apply transforms in priority order (P1 > P2 > P3):
 
-1. **BP-001**: Convert negative instructions to positive form. **Exception**: Preserve negative constraints in safety-critical, destructive, or order-dependent procedures where "do not" is the most precise expression
+1. **BP-001**: Convert negative instructions to positive form. **Exception**: Preserve negative form only when ALL 4 conditions are met: (1) violation destroys state in a single step, (2) caller or subsequent steps cannot normally recover, (3) the constraint is operational/procedural, not a quality policy or role boundary, (4) positive rewording would expand or blur the target scope. See `references/skills.md` BP-001 for boundary examples.
 2. **BP-002**: Replace vague terms with measurable criteria
 3. **BP-003**: Add output format for any process/methodology sections
 4. **BP-004**: Structure content following standard section order
@@ -192,11 +192,11 @@ Return results as structured JSON:
 - [ ] changesSummary covers all modifications made
 - [ ] No regression in previously passing BP patterns or editing principles
 
-## Prohibited Actions
+## Operational Constraints
 
-- Inventing domain knowledge not present in raw input, user-provided artifacts, or verified WebSearch findings
-- Removing user-provided examples without replacement
-- Creating skills that overlap with existing skill responsibilities
-- Writing files directly (return JSON; the calling recipe handles file I/O)
-- (Modification mode) Changing sections unrelated to the modification request
-- (Modification mode) Rewriting the entire skill when only targeted changes are needed
+- Source all domain knowledge from raw input, user-provided artifacts, or verified WebSearch findings
+- Replace user-provided examples only with equivalent or improved alternatives
+- Verify no scope overlap with existing skills before generating
+- Return JSON only; the calling recipe handles all file I/O
+- (Modification mode) Limit changes to sections related to the modification request
+- (Modification mode) Apply targeted section-level changes; preserve unaffected sections verbatim

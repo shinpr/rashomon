@@ -36,6 +36,8 @@ For each detected issue, record:
 - Original text (verbatim quote)
 - Suggested fix (concrete replacement text)
 
+When a pattern is detected but an exception applies (e.g., BP-001 negative form exception), record it separately in `patternExceptions` (not in `patternIssues`). For each exception, verify and record all 4 conditions from `references/skills.md` BP-001: (1) single-step state destruction, (2) caller cannot recover, (3) operational constraint not quality policy, (4) positive form would blur scope. If any condition is not met, classify as a patternIssue instead.
+
 ### Step 2: Principles Evaluation
 
 Evaluate content against 9 editing principles from `references/skills.md`:
@@ -90,6 +92,19 @@ Return results as structured JSON:
       "suggestedFix": "replacement text"
     }
   ],
+  "patternExceptions": [
+    {
+      "pattern": "BP-XXX",
+      "location": "section heading",
+      "original": "quoted text",
+      "conditions": {
+        "singleStepDestruction": "true|false + evidence",
+        "callerCannotRecover": "true|false + evidence",
+        "operationalNotPolicy": "true|false + evidence",
+        "positiveFormBlursScope": "true|false + evidence"
+      }
+    }
+  ],
   "principlesEvaluation": [
     {
       "principle": "1: Context efficiency",
@@ -140,9 +155,9 @@ Return results as structured JSON:
 | Progressive disclosure | Full evaluation | Verify changes did not degrade disclosure |
 | Extra check | — | Report issues outside change scope separately |
 
-## Prohibited Actions
+## Operational Constraints
 
-- Modifying skill content directly (return report only; caller handles edits)
-- Inventing issues not supported by BP patterns or 9 principles
-- Skipping P1 issues regardless of review mode
-- Providing grade A when any P1 issue exists
+- Return report only; the caller handles all content edits
+- Base every issue on a specific BP pattern (BP-001 through BP-008) or one of the 9 editing principles
+- Evaluate all P1 issues in every review mode
+- Assign grade A only when P1 issue count is zero
