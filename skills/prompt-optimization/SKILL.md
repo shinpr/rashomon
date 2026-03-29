@@ -20,7 +20,7 @@ High confidence research evidence for negative impact.
 
 | ID | Pattern | Research Basis |
 |----|---------|----------------|
-| BP-001 | Negative Instructions | Attention mechanism structural issue. 75% failure rate in ArXiv studies |
+| BP-001 | Negative Instructions | Attention focuses on forbidden content, increasing violation probability. Inverse scaling confirmed |
 | BP-002 | Vague Instructions | Primary failure cause. 40% of performance variance |
 | BP-003 | Missing Output Format | Directly linked to hallucination reduction |
 
