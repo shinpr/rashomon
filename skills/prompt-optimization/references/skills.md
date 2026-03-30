@@ -4,15 +4,26 @@ Supplementary criteria for applying prompt optimization patterns (BP-001~008) to
 
 ## BP Patterns in Skill Context
 
-The 8 BP patterns from the parent SKILL.md apply to skill content with these adaptations:
+The 8 BP patterns from the parent SKILL.md apply to skill content with these adaptations.
+
+### Two roles of skill content
+
+Skill content serves two distinct roles. Apply BP patterns accordingly:
+
+| Role | Description | BP application |
+|------|-------------|----------------|
+| **LLM instruction** | Directs the LLM's own judgment and behavior | Apply BP patterns directly |
+| **Output pattern guidance** | Examples/templates that shape what the LLM produces for a downstream consumer (image generation model, API, end user) | Apply BP to the instruction framing, not to individual values within examples. Increasing specificity for the downstream consumer (e.g., visual parameters instead of abstract mood words for image models) is a valid improvement even when the LLM itself understands the abstract term |
+
+### Pattern interpretations
 
 | Pattern | Skill-Specific Interpretation |
 |---------|-------------------------------|
 | BP-001 Negative Instructions | Skill instructions with "don't" increase probability of the forbidden behavior. Convert to positive directives. **Exception**: Negative form is permitted only when ALL of the following are true: (1) Violation destroys state in a single step, (2) Caller or subsequent steps cannot normally recover the outcome, (3) The constraint is an operational/procedural restriction, not a quality policy or role boundary, (4) Positive rewording would expand or blur the instruction's target scope. If any condition is no, rewrite in positive form. **Exception examples** — permitted: "Do not modify the command", "Do not add flags", "Do not execute destructive operations". **Not permitted** (rewrite in positive form): "Do not invent issues" → "Base every issue on BP patterns or 9 principles", "Do not skip P1 issues" → "Evaluate all P1 issues in every review mode", "Do not give grade A when P1 exists" → "Assign grade A only when P1 count is zero", "Do not create overlapping skills" → "Verify no scope overlap with existing skills before generating". Outputs that the caller validates, overwrites, or discards are never irreversible. Quality policies, role boundaries, scoring criteria, and general work rules are always positive form. |
-| BP-002 Vague Instructions | Replace "appropriate", "good", "proper" with measurable if-then criteria or concrete thresholds. Every vague instruction forces the LLM to guess. |
+| BP-002 Vague Instructions | Replace "appropriate", "good", "proper" with measurable if-then criteria or concrete thresholds. Every vague instruction forces the LLM to guess. **Skill exception**: Expressions that the LLM can resolve unambiguously from input context (e.g., "where the user left gaps" when the user's prompt is available for comparison) are not vague — they describe a deterministic operation, not a subjective judgment. |
 | BP-003 Missing Output Format | Every process/methodology section must define its output structure (JSON schema, markdown template, or example). |
 | BP-004 Unstructured Content | Apply standard section order (see below). Skip restructuring if skill is under 30 lines and covers a single topic. |
-| BP-005 Missing Context | All assumed knowledge must be stated. Domain terms must be defined or linked to prerequisites. Add "when to use" guidance with concrete scenarios. |
+| BP-005 Missing Context | All assumed knowledge must be stated. Domain terms must be defined or linked to prerequisites. Add "when to use" guidance with concrete scenarios. **Skill exception**: Terms within the LLM's baseline knowledge (widely-used technical terminology, standard domain vocabulary such as photography terms, programming concepts) require no definition. Only project-specific terms, internal naming conventions, or domain jargon outside common LLM training data need explicit definition. |
 | BP-006 Complex Content | Break 3+ objectives into numbered steps with checkpoints. Skip for simple reference tables or single-criteria rules. |
 | BP-007 Biased Examples | Include diverse cases: happy path, edge cases, error cases, varying complexity. |
 | BP-008 No Uncertainty Permission | Add escalation criteria for ambiguous cases and explicit stopping conditions. |
@@ -24,7 +35,7 @@ Measurable quality criteria for skill content. Each principle includes a pass/fa
 | # | Principle | Pass Criteria | Fail Example |
 |---|-----------|---------------|--------------|
 | 1 | Context efficiency | Every sentence contributes to LLM decision-making. No filler. | "This is an important skill that helps with..." |
-| 2 | Deduplication | No concept explained twice within the skill or across skills | Same error handling rules in both coding-standards and typescript-rules |
+| 2 | Deduplication | No concept explained twice at the same abstraction level within the skill or across skills. Mentions at different structural roles (e.g., classification framework vs execution detail) are not duplicates | Same error handling rules in both coding-standards and typescript-rules |
 | 3 | Grouping | Related criteria in single section (minimize read operations) | Scattered error handling rules across 4 sections |
 | 4 | Measurability | All criteria use if-then format or concrete thresholds | "Write clean code" without definition of clean |
 | 5 | Positive form | Instructions state what to do (BP-001 applied) | "Don't use any" instead of "Use only X" |
