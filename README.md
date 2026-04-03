@@ -7,73 +7,31 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue" alt="License"></a>
 </p>
 
-**See what actually changes when you improve your prompts and skills — not just different wording.**
+**Know whether your skills actually improve agent behavior — not just look different.**
 
 ## Why rashomon?
 
 > Inspired by the *Rashomon effect* — the idea that the same event can produce different outcomes depending on perspective.
 > rashomon makes those differences explicit and comparable.
 
-- Spending too much time on trial-and-error with prompts?
-- Read best practices but not sure how they apply to your case?
-- Want proof that your changes actually made things better?
-- Building skills but unsure if they improve agent behavior?
+- Built a skill but unsure if it actually changes agent behavior?
+- Iterating on skills and prompts by gut feel instead of evidence?
+- Want proof that your changes made things better, not just different?
 
-**rashomon** analyzes, improves, and compares prompts and skills—so you can see what *actually* changed, and whether it matters. Unlike rule-based checks, rashomon evaluates real outputs through blind comparison (without knowing which version produced which output).
+**rashomon** evaluates skills and prompts through blind comparison — running tasks with and without your changes in isolated environments, then comparing real outputs without knowing which version produced which.
 
 ### Who Is This For?
 
 rashomon is designed for:
+- Skill authors who want evidence-based validation
 - Developers using Claude Code daily
 - Teams iterating on complex prompts (coding, analysis, writing)
-- Skill authors who want evidence-based validation
-- Anyone who wants **evidence**, not vibes, when improving prompts and skills
+- Anyone who wants **evidence**, not vibes, when improving skills and prompts
 
 Not ideal if:
-- You don't use git
 - You want one-shot prompt rewriting without comparison
 
 ## Quick Example
-
-### Prompt Evaluation
-
-```
-/recipe-eval-prompt Write a function to sort an array
-```
-
-### What You Get
-
-**1. Detected Issues**
-```
-- BP-002 (Vague Instructions): Sort order, language, and error handling not specified
-- BP-003 (Missing Output Format): No expected output structure defined
-```
-
-**2. Improved Prompt**
-```
-Write a TypeScript function that sorts a number array in ascending order.
-- Return empty array for empty input
-- Include JSDoc comments
-- Output: function code with example usage
-```
-
-**3. Comparison Report**
-
-| Aspect | Original | Improved |
-|--------|----------|----------|
-| Type definitions | None | Included |
-| Edge case handling | None | Included |
-| Documentation | None | JSDoc added |
-
-**Result: Structural Improvement** - The optimization made a meaningful difference.
-
-### Example: When rashomon finds no real improvement
-
-```
-/recipe-eval-prompt Summarize this article in 3 bullet points
-```
-
-**Result: Variance** - Prompt was already well-scoped; differences were stylistic only.
 
 ### Skill Evaluation
 
@@ -109,6 +67,55 @@ Recommendation: ship
 
 Updates an existing skill, then evaluates old vs new version side by side.
 
+See a real-world example: [I Built a Skill Reviewer. Then I Ran It on Itself.](https://dev.to/shinpr/i-built-a-skill-reviewer-then-i-ran-it-on-itself-4m4j)
+
+### Prompt Evaluation
+
+```
+/recipe-eval-prompt Write a function to sort an array
+```
+
+Analyzes prompt issues, generates an improved version, runs both in isolated environments, and shows what actually changed.
+
+<details>
+<summary>Prompt Evaluation Details</summary>
+
+#### What You Get
+
+**1. Detected Issues**
+```
+- BP-002 (Vague Instructions): Sort order, language, and error handling not specified
+- BP-003 (Missing Output Format): No expected output structure defined
+```
+
+**2. Improved Prompt**
+```
+Write a TypeScript function that sorts a number array in ascending order.
+- Return empty array for empty input
+- Include JSDoc comments
+- Output: function code with example usage
+```
+
+**3. Comparison Report**
+
+| Aspect | Original | Improved |
+|--------|----------|----------|
+| Type definitions | None | Included |
+| Edge case handling | None | Included |
+| Documentation | None | JSDoc added |
+
+**Result: Structural Improvement** - The optimization made a meaningful difference.
+
+#### Example: When rashomon finds no real improvement
+
+```
+/recipe-eval-prompt Summarize this article in 3 bullet points
+```
+
+**Result: Variance** - Prompt was already well-scoped; differences were stylistic only.
+
+</details>
+
 ## Installation
 
 > Requires [Claude Code](https://claude.ai/code) (this is a Claude Code plugin)
@@ -129,6 +136,22 @@ claude
 
 ## Usage
 
+### Skill Evaluation
+
+```
+/recipe-eval-skill create
+```
+
+Create a new skill and evaluate its effectiveness.
+
+```
+/recipe-eval-skill my-skill-name what to change
+```
+
+Update an existing skill and compare old vs new.
+
+### Prompt Evaluation
+
 ```
 /recipe-eval-prompt Your prompt here
 ```
@@ -146,17 +169,16 @@ For complex tasks that need more time, just mention it in natural language:
 ## How It Works
 
 ```
-Your Prompt
-    ↓
-1. Analyze    → Detect common issues automatically
-    ↓
-2. Improve    → Generate optimized version
-    ↓
-3. Run Both   → Execute in isolated environments
-    ↓
-4. Compare    → Show what actually changed
-    ↓
-Comparison Report
+Skill Evaluation (/recipe-eval-skill)
+    ├── skill-creator (generates/modifies skills)
+    ├── skill-reviewer (grades quality A/B/C)
+    ├── eval-executor ×2 (isolated worktrees)
+    └── skill-eval-reporter (blind A/B comparison)
+
+Prompt Evaluation (/recipe-eval-prompt)
+    ├── prompt-analyzer (analyzes and optimizes)
+    ├── prompt-executor ×2 (isolated worktrees)
+    └── report-generator (compares results)
 ```
 
 <details>
@@ -164,37 +186,36 @@ Comparison Report
 
 ### Isolated Execution
 
-rashomon uses **git worktrees** to run both prompts in completely separate environments. A worktree is a Git feature that creates independent working directories from the same repository—this ensures the two executions don't interfere with each other.
-
-### Architecture
-
-```
-Prompt Evaluation (/recipe-eval-prompt)
-    ├── prompt-analyzer (analyzes and optimizes)
-    ├── prompt-executor ×2 (isolated worktrees)
-    └── report-generator (compares results)
-
-Skill Evaluation (/recipe-eval-skill)
-    ├── skill-creator (generates/modifies skills)
-    ├── skill-reviewer (grades quality A/B/C)
-    ├── eval-executor.py ×2 (isolated worktrees)
-    └── skill-eval-reporter (blind A/B comparison)
-```
+rashomon uses **git worktrees** to run both versions in completely separate environments. A worktree is a Git feature that creates independent working directories from the same repository—this ensures the two executions don't interfere with each other.
 
 </details>
 
-## What It Detects
+## Improvement Classification
 
-rashomon checks for 8 common prompt issues:
+Not all differences are improvements. rashomon classifies results into four categories:
+
+| Classification | Meaning | Recommendation |
+|---------------|---------|----------------|
+| **Structural** | Real improvement in accuracy, completeness, or quality | Use the new version |
+| **Context Addition** | One version had more project-specific knowledge | Useful if the context is accurate |
+| **Expressive** | Different wording, same substance | Either version is fine |
+| **Variance** | Just normal LLM randomness | Original was already good |
+
+Classification is based on:
+- Whether detected issues were resolved
+- Output completeness and constraint adherence
+- Agreement between blind quality assessment and observable output differences
+
+<details>
+<summary>Quality Patterns (BP-001 through BP-008)</summary>
+
+Both skill review and prompt analysis check against 8 common patterns:
 
 | Priority | Issues |
 |----------|--------|
 | **Critical** | Negative instructions ("don't do X"), vague instructions, missing output format |
 | **High Impact** | Unstructured prompts, missing context, complex tasks without breakdown |
 | **Enhancement** | Biased examples, no permission for uncertainty |
-
-<details>
-<summary>Pattern Details (BP-001 through BP-008)</summary>
 
 ### P1: Critical (Must Fix)
 
@@ -220,22 +241,6 @@ rashomon checks for 8 common prompt issues:
 | BP-008 | No Uncertainty Permission | No "I don't know" option causes hallucination | Add: "If unsure, say so" |
 
 </details>
-
-## Improvement Classification
-
-Not all differences are improvements. rashomon classifies results into four categories:
-
-| Classification | Meaning | Recommendation |
-|---------------|---------|----------------|
-| **Structural** | Real improvement in accuracy, completeness, or quality | Use the optimized version |
-| **Context Addition** | One version had more project-specific knowledge | Useful if the context is accurate |
-| **Expressive** | Different wording, same substance | Either version is fine |
-| **Variance** | Just normal LLM randomness | Original was already good |
-
-Classification is based on:
-- Whether detected issues (BP patterns) were resolved
-- Output completeness and constraint adherence
-- Agreement between blind quality assessment and observable output differences
 
 <details>
 <summary>About Knowledge Base</summary>
