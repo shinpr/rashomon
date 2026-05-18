@@ -1,6 +1,6 @@
 {
   "name": "rashomon",
-  "version": "0.4.0",
+  "version": "0.3.4",
   "description": "Evaluate prompts and skills through parallel execution comparison in git worktrees. Prompt optimization with BP-001~008 patterns, skill creation/update with quality grading, and blind A/B evaluation.",
   "author": {
     "name": "Shinsuke Kagawa",
