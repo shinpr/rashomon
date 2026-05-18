@@ -1,0 +1,20 @@
+{
+  "name": "rashomon",
+  "interface": {
+    "displayName": "Rashomon"
+  },
+  "plugins": [
+    {
+      "name": "rashomon",
+      "source": {
+        "source": "local",
+        "path": "./plugins/rashomon"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}
