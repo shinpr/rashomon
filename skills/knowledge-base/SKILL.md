@@ -1,6 +1,7 @@
 ---
 name: knowledge-base
 description: Project-specific prompt optimization knowledge management. Use when storing or retrieving learned patterns from comparisons. Provides schema, extraction criteria, capacity management, and retention scoring.
+user-invocable: false
 ---
 
 # Knowledge Base Skill

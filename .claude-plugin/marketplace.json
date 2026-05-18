@@ -10,7 +10,8 @@
     {
       "name": "rashomon",
       "source": "./",
-      "description": "Evaluate prompts and skills through parallel execution comparison in git worktrees"
+      "description": "Evaluate prompts and skills through parallel execution comparison in git worktrees",
+      "version": "0.3.4"
     }
   ]
 }

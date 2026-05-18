@@ -1,0 +1,8 @@
+repos:
+  - repo: local
+    hooks:
+      - id: plugin-sync-check
+        name: plugin sync check
+        entry: python scripts/sync_plugin.py --check
+        language: system
+        pass_filenames: false

@@ -1,6 +1,7 @@
 ---
 name: worktree-execution
 description: Git worktree management for isolated parallel prompt execution. Use when creating isolated environments for prompt comparison or managing worktree lifecycle. Provides creation, cleanup, and orphan detection scripts.
+user-invocable: false
 ---
 
 # Worktree Execution Skill
