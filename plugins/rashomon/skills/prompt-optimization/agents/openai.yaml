@@ -1,0 +1,7 @@
+interface:
+  display_name: "Prompt Optimization"
+  short_description: "Optimize prompts with BP-001~008 patterns"
+  default_prompt: "Use $rashomon:prompt-optimization to analyze and optimize this prompt with BP-001~008 patterns and the 3-step flow (detect, optimize, balance)."
+
+policy:
+  allow_implicit_invocation: true
