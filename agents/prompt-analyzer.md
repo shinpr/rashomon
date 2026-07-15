@@ -19,9 +19,9 @@ Register work steps using TaskCreate. Include `Confirm skill constraints` first 
 
 ## Execution Contract
 
-1. Execute the prompt-optimization skill's **Gated 3-Step Flow** in the current invocation.
+1. Execute the prompt-optimization skill's **Gated 3-Step Flow** with `output_mode: machine` in the current invocation.
 2. Load the references required by the skill's **Required References** table.
-3. Build the response in the exact key order defined by the skill's **Output Contract**.
+3. Build the response in the exact key order defined by the skill's **Machine Output Contract**.
 4. Complete and evaluate each gate before populating the next phase.
 5. Return one valid JSON object as the complete response.
 

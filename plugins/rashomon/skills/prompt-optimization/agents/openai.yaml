@@ -1,7 +1,7 @@
 interface:
   display_name: "Prompt Optimization"
   short_description: "Optimize prompts with gated BP-001~008 analysis"
-  default_prompt: "Use $rashomon:prompt-optimization to analyze and optimize this prompt with the portable gated flow. Return the complete state JSON."
+  default_prompt: "Use $rashomon:prompt-optimization to analyze and optimize this prompt."
 
 policy:
   allow_implicit_invocation: true

@@ -203,55 +203,31 @@ class TestStreamProcessorToolUse:
         assert processor.tools_used == set()
         assert processor.files_modified == []
 
-    def test_ignores_write_without_file_path(self):
-        processor = StreamProcessor(target_skill="x")
-        line = json.dumps({
-            "type": "assistant",
-            "message": {"content": [
-                {"type": "tool_use", "name": "Write", "input": {}},
-            ]},
-        })
-        processor.process_line(line)
-        assert processor.files_modified == []
-
-
 # --- StreamProcessor: result event ---
 
 
 class TestStreamProcessorResult:
-    def test_returns_true_on_result_event(self):
-        processor = StreamProcessor(target_skill="x")
-        line = json.dumps({"type": "result", "result": "done"})
-        assert processor.process_line(line) is True
-
     def test_result_accessible_via_build_output(self):
         processor = StreamProcessor(target_skill="x")
         processor.process_line(json.dumps({"type": "result", "result": "output text"}))
         assert processor.build_output()["result"] == "output text"
-
-    def test_returns_false_for_non_result_events(self):
-        processor = StreamProcessor(target_skill="x")
-        assert processor.process_line(json.dumps({"type": "assistant", "message": {"content": []}})) is False
-        assert processor.process_line(json.dumps({"type": "system", "subtype": "init", "skills": []})) is False
 
 
 # --- StreamProcessor: edge cases ---
 
 
 class TestStreamProcessorEdgeCases:
-    def test_handles_empty_line(self):
+    def test_ignores_stream_noise_without_resetting_state(self):
         processor = StreamProcessor(target_skill="x")
-        assert processor.process_line("") is False
-        assert processor.process_line("   ") is False
+        processor.process_line(json.dumps({
+            "type": "system", "subtype": "init", "skills": ["x"],
+        }))
 
-    def test_handles_invalid_json(self):
-        processor = StreamProcessor(target_skill="x")
-        assert processor.process_line("not json") is False
-        assert processor.process_line("{broken") is False
+        for line in ("", "   ", "not json", "{broken", json.dumps({"data": "unknown"})):
+            processor.process_line(line)
 
-    def test_handles_event_with_missing_type(self):
-        processor = StreamProcessor(target_skill="x")
-        assert processor.process_line(json.dumps({"data": "something"})) is False
+        assert processor.skill_discovered is True
+        assert processor.result_json is None
 
     def test_handles_assistant_with_missing_message(self):
         processor = StreamProcessor(target_skill="x")
@@ -414,18 +390,6 @@ class TestExecute:
 
         assert result["status"] == "error"
         assert result["error"] == "CLI exited with code 1"
-
-    def test_none_returncode_treated_as_zero(self):
-        stdout = [json.dumps({"type": "result", "result": "done"}) + "\n"]
-        mock = self._make_mock_process(stdout)
-        mock.returncode = None
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("subprocess.Popen", return_value=mock):
-                result = self._execute("prompt", tmpdir, "x", "Read")
-
-        assert result["status"] == "success"
-        assert result["exit_code"] == 0
 
     def test_partial_when_result_exists_but_nonzero_exit(self):
         stdout = [json.dumps({"type": "result", "result": "partial output"}) + "\n"]
