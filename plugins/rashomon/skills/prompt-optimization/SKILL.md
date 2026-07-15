@@ -7,7 +7,7 @@ description: Analyzes and optimizes prompts using BP-001~008 patterns and a gate
 
 ## Purpose
 
-Improve prompts while preserving user intent. Execute the workflow in the current invocation and keep intermediate state in returned JSON so it remains portable across callers and environments.
+Improve prompts while preserving user intent.
 
 ## Core Principles
 
@@ -15,7 +15,7 @@ Improve prompts while preserving user intent. Execute the workflow in the curren
 2. **Intent Preservation**: Record the original requirements before changing wording, structure, context, constraints, or examples.
 3. **Necessary and Sufficient Context**: Include the information needed for a decision, action, or verification result. Condense or omit information that does not affect one of them.
 4. **Traceable Changes**: Connect every change to a finding or project-specific source.
-5. **Portable State**: Represent phase state in the response JSON. The protocol requires no temporary artifacts or additional agents.
+5. **Self-Contained Execution**: Require no temporary artifacts or additional agents.
 
 ## Required References
 
@@ -28,6 +28,12 @@ Load references at the phase where their rules become necessary:
 | Balance | Every prompt | `references/execution-quality.yaml` |
 
 Record the loaded path and covered rule IDs in the phase's `reference_coverage`. A phase passes only when its required references and rule coverage are present.
+
+## Output Mode
+
+Select the output mode before analysis. An explicit `output_mode` of `interactive` or `machine` takes priority; for any other value, ask the caller to choose one. When it is absent, use Machine mode only if the caller explicitly requests the `Machine Output Contract` as the response format; otherwise use Interactive mode. Apply the same rule to human and LLM callers.
+
+Keep `output_mode` outside the target prompt and `analysis.original_prompt`.
 
 ## Pattern Detection
 
@@ -46,7 +52,7 @@ Evaluate every pattern and record `issue`, `already_satisfied`, or `not_applicab
 
 ## Gated 3-Step Flow
 
-Build one JSON object in **Output Contract** key order. Complete each phase and its gate before generating the next phase; use the transition table as the control rule.
+Maintain one complete phase-state object in the current invocation. Complete each phase and its gate before generating the next phase; use the transition table as the control rule. Serialize the object only in Machine mode.
 
 ### Step 1: Analysis
 
@@ -96,13 +102,21 @@ Start this step when `optimization_gate.status` is `pass`.
 | Gate result | Required transition |
 |---|---|
 | `pass` | Populate the next phase and its gate |
-| `blocked` | Keep later workflow phases and their gates `null`, set `result.status` to `blocked`, and return the JSON |
+| `blocked` | Keep later workflow phases and their gates `null`, set `result.status` to `blocked`, and format the result in the selected output mode |
 | Final balance `pass` with changes | Set `result.status` to `optimized` |
 | Final balance `pass` without changes | Set `result.status` to `original_sufficient` |
 
-## Output Contract
+## Interactive Output Contract
 
-Return valid JSON in this key order. Populate phases sequentially; later phases remain `null` until their preceding gate passes.
+Format the user-facing result by status:
+
+- For `optimized`, return `## Final Prompt` with the optimized prompt, followed by `## Changes` with one bullet per applied change and its reason.
+- For `original_sufficient`, return `## Final Prompt` with the original prompt, followed by `## Changes` stating that no beneficial change was found and the original is already sufficient.
+- For `blocked`, return only `## Required Input` with one bullet per missing item needed to continue.
+
+## Machine Output Contract
+
+In Machine mode, return exactly one valid JSON object in this key order. Populate phases sequentially; later phases remain `null` until their preceding gate passes.
 
 ```json
 {
