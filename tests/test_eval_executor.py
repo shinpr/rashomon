@@ -3,6 +3,7 @@
 
 import importlib.util
 import json
+import os
 import subprocess
 import tempfile
 from pathlib import Path
@@ -19,6 +20,22 @@ _spec.loader.exec_module(_mod)
 StreamProcessor = _mod.StreamProcessor
 _error_output = _mod._error_output
 execute = _mod.execute
+_git_changes = _mod._git_changes
+_git_snapshot = _mod._git_snapshot
+_resolve_tool_path = _mod._resolve_tool_path
+_skill_environment_after = _mod._skill_environment_after
+_skill_environment_before = _mod._skill_environment_before
+skill_directory_fingerprint = _mod.skill_directory_fingerprint
+
+
+@pytest.fixture(autouse=True)
+def stable_git_state(monkeypatch):
+    monkeypatch.setattr(
+        _mod,
+        "_git_snapshot",
+        lambda _cwd: {"head": "abc123", "entries": {}},
+    )
+    monkeypatch.setattr(_mod, "_git_changes", lambda _cwd, _before, _after: [])
 
 
 # --- StreamProcessor: init event ---
@@ -42,6 +59,16 @@ class TestStreamProcessorInit:
         })
         processor.process_line(line)
         assert processor.skill_discovered is False
+
+    def test_namespaced_skill_is_diagnostic_not_project_discovery(self):
+        processor = StreamProcessor(target_skill="my-skill")
+        processor.process_line(json.dumps({
+            "type": "system",
+            "subtype": "init",
+            "skills": ["plugin:my-skill"],
+        }))
+        assert processor.skill_discovered is False
+        assert processor.namespaced_skill_discoveries == ["plugin:my-skill"]
 
     def test_skill_not_discovered_when_skills_list_empty(self):
         processor = StreamProcessor(target_skill="my-skill")
@@ -82,43 +109,71 @@ class TestStreamProcessorToolUse:
         })
         processor.process_line(line)
         assert processor.skill_invoked is True
+        assert processor.build_output()["skill_used"] is True
         assert "Skill" in processor.tools_used
 
-    def test_ignores_skill_invocation_for_different_skill(self):
+    def test_namespaced_invocation_is_diagnostic_not_project_usage(self):
         processor = StreamProcessor(target_skill="error-handling")
         line = json.dumps({
             "type": "assistant",
             "message": {"content": [
-                {"type": "tool_use", "name": "Skill", "input": {"skill": "other-skill"}},
+                {"type": "tool_use", "name": "Skill", "input": {"skill": "plugin:error-handling"}},
             ]},
         })
         processor.process_line(line)
         assert processor.skill_invoked is False
+        assert processor.build_output()["skill_used"] is False
+        assert processor.namespaced_skill_invocations == ["plugin:error-handling"]
         assert "Skill" in processor.tools_used
 
-    @pytest.mark.parametrize("tool_name", ["Write", "Edit", "MultiEdit"])
-    def test_tracks_file_modifications(self, tool_name):
+    def test_does_not_infer_file_modifications_from_tool_name(self):
         processor = StreamProcessor(target_skill="x")
         line = json.dumps({
             "type": "assistant",
             "message": {"content": [
-                {"type": "tool_use", "name": tool_name, "input": {"file_path": "/src/a.js"}},
+                {"type": "tool_use", "name": "Write", "input": {"file_path": "/src/a.js"}},
             ]},
         })
         processor.process_line(line)
-        assert processor.files_modified == ["/src/a.js"]
+        assert processor.files_modified == []
 
-    def test_deduplicates_file_modifications(self):
-        processor = StreamProcessor(target_skill="x")
-        for _ in range(3):
-            line = json.dumps({
-                "type": "assistant",
-                "message": {"content": [
-                    {"type": "tool_use", "name": "Edit", "input": {"file_path": "/src/a.js"}},
-                ]},
-            })
-            processor.process_line(line)
-        assert processor.files_modified == ["/src/a.js"]
+    def test_direct_skill_read_counts_as_usage(self):
+        path = "/repo/.claude/skills/error-handling/SKILL.md"
+        processor = StreamProcessor(
+            target_skill="error-handling",
+            cwd="/repo",
+            expected_skill_path=path,
+        )
+        processor.process_line(json.dumps({
+            "type": "assistant",
+            "message": {"content": [
+                {"type": "tool_use", "name": "Read", "input": {"file_path": path}},
+            ]},
+        }))
+        output = processor.build_output()
+        assert output["skill_invoked"] is False
+        assert output["skill_used"] is True
+        assert output["skill_usage_evidence"] == [
+            {"method": "Read", "value": _resolve_tool_path(path, "/repo")}
+        ]
+
+    def test_same_named_skill_at_wrong_path_does_not_count_as_usage(self):
+        processor = StreamProcessor(
+            target_skill="error-handling",
+            cwd="/repo",
+            expected_skill_path="/repo/.claude/skills/error-handling/SKILL.md",
+        )
+        processor.process_line(json.dumps({
+            "type": "assistant",
+            "message": {"content": [
+                {
+                    "type": "tool_use",
+                    "name": "Read",
+                    "input": {"file_path": "/repo/skills/error-handling/SKILL.md"},
+                },
+            ]},
+        }))
+        assert processor.build_output()["skill_used"] is False
 
     def test_tracks_multiple_tools(self):
         processor = StreamProcessor(target_skill="x")
@@ -231,7 +286,11 @@ class TestStreamProcessorBuildOutput:
         assert output["result"] == "task complete"
         assert output["skill_discovered"] is True
         assert output["skill_invoked"] is True
-        assert output["files_modified"] == ["/src/a.js"]
+        assert output["skill_used"] is True
+        assert output["skill_usage_evidence"] == [{"method": "Skill", "value": "my-skill"}]
+        assert output["namespaced_skill_discoveries"] == []
+        assert output["namespaced_skill_invocations"] == []
+        assert output["files_modified"] == []
         assert output["tools_used"] == ["Edit", "Skill"]
 
     def test_output_without_result(self):
@@ -240,6 +299,10 @@ class TestStreamProcessorBuildOutput:
         assert output["result"] == ""
         assert output["skill_discovered"] is False
         assert output["skill_invoked"] is False
+        assert output["skill_used"] is False
+        assert output["skill_usage_evidence"] == []
+        assert output["namespaced_skill_discoveries"] == []
+        assert output["namespaced_skill_invocations"] == []
         assert output["files_modified"] == []
         assert output["tools_used"] == []
 
@@ -256,6 +319,12 @@ class TestErrorOutput:
         assert result["error"] == "CLI not found"
         assert result["skill_discovered"] is False
         assert result["skill_invoked"] is False
+        assert result["skill_used"] is False
+        assert result["skill_usage_evidence"] == []
+        assert result["namespaced_skill_discoveries"] == []
+        assert result["namespaced_skill_invocations"] == []
+        assert result["skill_environment"] is None
+        assert result["base_sha"] == ""
         assert result["files_modified"] == []
         assert result["tools_used"] == []
 
@@ -266,10 +335,24 @@ class TestErrorOutput:
 class TestExecute:
     def _make_mock_process(self, stdout_lines, returncode=0, stderr=""):
         mock_process = MagicMock()
-        mock_process.stdout.readline.side_effect = stdout_lines + [""]
-        mock_process.communicate.return_value = ("", stderr)
+        mock_process.communicate.return_value = ("".join(stdout_lines), stderr)
         mock_process.returncode = returncode
         return mock_process
+
+    def _execute(self, prompt, tmpdir, skill_name, allowed_tools, **kwargs):
+        skill_dir = Path(tmpdir) / ".claude" / "skills" / skill_name
+        skill_dir.mkdir(parents=True, exist_ok=True)
+        (skill_dir / "SKILL.md").write_text(f"---\nname: {skill_name}\n---\n")
+        fingerprint = skill_directory_fingerprint(str(skill_dir))
+        return execute(
+            prompt,
+            tmpdir,
+            skill_name,
+            allowed_tools,
+            expected_skill_dir=str(skill_dir),
+            expected_skill_fingerprint=fingerprint,
+            **kwargs,
+        )
 
     def test_success_with_result(self):
         stdout = [
@@ -282,32 +365,32 @@ class TestExecute:
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("subprocess.Popen", return_value=self._make_mock_process(stdout)):
-                result = execute("test prompt", tmpdir, "my-skill", "Read,Skill")
+                result = self._execute("test prompt", tmpdir, "my-skill", "Read,Skill")
 
         assert result["status"] == "success"
         assert result["result"] == "done"
         assert result["skill_discovered"] is True
         assert result["skill_invoked"] is True
+        assert result["skill_environment"]["valid"] is True
+        assert result["base_sha"] == "abc123"
 
-    def test_sigterm_exit_code_treated_as_success(self):
-        stdout = [json.dumps({"type": "result", "result": "done"}) + "\n"]
-        mock = self._make_mock_process(stdout, returncode=143)
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("subprocess.Popen", return_value=mock):
-                result = execute("prompt", tmpdir, "x", "Read")
-
-        assert result["status"] == "success"
-
-    def test_negative_sigterm_exit_code_treated_as_success(self):
-        stdout = [json.dumps({"type": "result", "result": "done"}) + "\n"]
-        mock = self._make_mock_process(stdout, returncode=-15)
+    def test_namespaced_invocation_invalidates_project_skill_run(self):
+        stdout = [
+            json.dumps({"type": "system", "subtype": "init", "skills": ["x", "plugin:x"]}) + "\n",
+            json.dumps({"type": "assistant", "message": {"content": [
+                {"type": "tool_use", "name": "Skill", "input": {"skill": "plugin:x"}},
+            ]}}) + "\n",
+            json.dumps({"type": "result", "result": "done"}) + "\n",
+        ]
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("subprocess.Popen", return_value=mock):
-                result = execute("prompt", tmpdir, "x", "Read")
+            with patch("subprocess.Popen", return_value=self._make_mock_process(stdout)):
+                result = self._execute("prompt", tmpdir, "x", "Read,Skill")
 
-        assert result["status"] == "success"
+        assert result["status"] == "partial"
+        assert result["skill_used"] is False
+        assert result["skill_environment"]["valid"] is False
+        assert result["namespaced_skill_invocations"] == ["plugin:x"]
 
     def test_error_when_no_result_and_nonzero_exit(self):
         stdout = [json.dumps({"type": "system", "subtype": "init", "skills": []}) + "\n"]
@@ -315,7 +398,7 @@ class TestExecute:
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("subprocess.Popen", return_value=mock):
-                result = execute("prompt", tmpdir, "x", "Read")
+                result = self._execute("prompt", tmpdir, "x", "Read")
 
         assert result["status"] == "error"
         assert result["exit_code"] == 1
@@ -327,7 +410,7 @@ class TestExecute:
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("subprocess.Popen", return_value=mock):
-                result = execute("prompt", tmpdir, "x", "Read")
+                result = self._execute("prompt", tmpdir, "x", "Read")
 
         assert result["status"] == "error"
         assert result["error"] == "CLI exited with code 1"
@@ -339,7 +422,7 @@ class TestExecute:
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("subprocess.Popen", return_value=mock):
-                result = execute("prompt", tmpdir, "x", "Read")
+                result = self._execute("prompt", tmpdir, "x", "Read")
 
         assert result["status"] == "success"
         assert result["exit_code"] == 0
@@ -350,7 +433,7 @@ class TestExecute:
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("subprocess.Popen", return_value=mock):
-                result = execute("prompt", tmpdir, "x", "Read")
+                result = self._execute("prompt", tmpdir, "x", "Read")
 
         assert result["status"] == "partial"
         assert result["result"] == "partial output"
@@ -365,7 +448,9 @@ class TestExecute:
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("subprocess.Popen", return_value=mock_process):
-                result = execute("prompt", tmpdir, "x", "Read", timeout_ms=5000)
+                result = self._execute(
+                    "prompt", tmpdir, "x", "Read", timeout_ms=5000
+                )
 
         assert result["status"] == "error"
         assert result["exit_code"] == 124
@@ -375,7 +460,7 @@ class TestExecute:
     def test_cli_not_found(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("subprocess.Popen", side_effect=FileNotFoundError()):
-                result = execute("prompt", tmpdir, "x", "Read")
+                result = self._execute("prompt", tmpdir, "x", "Read")
 
         assert result["status"] == "error"
         assert result["exit_code"] == 127
@@ -383,12 +468,11 @@ class TestExecute:
 
     def test_generic_exception_handling(self):
         mock_process = MagicMock()
-        mock_process.stdout.readline.side_effect = RuntimeError("unexpected")
-        mock_process.communicate.return_value = ("", "")
+        mock_process.communicate.side_effect = [RuntimeError("unexpected"), ("", "")]
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("subprocess.Popen", return_value=mock_process):
-                result = execute("prompt", tmpdir, "x", "Read")
+                result = self._execute("prompt", tmpdir, "x", "Read")
 
         assert result["status"] == "error"
         assert result["exit_code"] == 1
@@ -399,24 +483,138 @@ class TestExecute:
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("subprocess.Popen", return_value=self._make_mock_process(stdout)) as mock_popen:
-                execute("my prompt", tmpdir, "test-skill", "Read,Write")
+                self._execute("my prompt", tmpdir, "test-skill", "Read,Write")
 
-            call_args = mock_popen.call_args[0][0]
-            assert call_args[0] == "claude"
-            assert "--output-format" in call_args
-            assert "stream-json" in call_args
-            assert "--verbose" in call_args
-            assert "-p" in call_args
-            assert "my prompt" in call_args
-            assert "--allowedTools" in call_args
-            assert "Read,Write" in call_args
+            assert mock_popen.call_args[0][0] == [
+                "claude",
+                "-p",
+                "my prompt",
+                "--output-format",
+                "stream-json",
+                "--verbose",
+                "--setting-sources",
+                "project,local",
+                "--allowedTools",
+                "Read,Write",
+            ]
+            assert mock_popen.call_args.kwargs["env"]["CLAUDE_CODE_DISABLE_AUTO_MEMORY"] == "1"
 
     def test_omits_allowed_tools_when_empty(self):
         stdout = [json.dumps({"type": "result", "result": ""}) + "\n"]
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("subprocess.Popen", return_value=self._make_mock_process(stdout)) as mock_popen:
-                execute("prompt", tmpdir, "x", "")
+                self._execute("prompt", tmpdir, "x", "")
 
             call_args = mock_popen.call_args[0][0]
             assert "--allowedTools" not in call_args
+
+    def test_rejects_wrong_expected_fingerprint_before_launch(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            skill_dir = Path(tmpdir) / ".claude" / "skills" / "x"
+            skill_dir.mkdir(parents=True)
+            (skill_dir / "SKILL.md").write_text("---\nname: x\n---\n")
+            with patch("subprocess.Popen") as mock_popen:
+                result = execute(
+                    "prompt",
+                    tmpdir,
+                    "x",
+                    "Read",
+                    expected_skill_dir=str(skill_dir),
+                    expected_skill_fingerprint="0" * 64,
+                )
+
+        assert result["status"] == "error"
+        assert result["skill_environment"]["valid"] is False
+        mock_popen.assert_not_called()
+
+    def test_rejects_competing_same_named_skill_before_launch(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            expected = Path(tmpdir) / ".claude" / "skills" / "x"
+            competing = Path(tmpdir) / "skills" / "x"
+            for skill_dir in (expected, competing):
+                skill_dir.mkdir(parents=True)
+                (skill_dir / "SKILL.md").write_text("---\nname: x\n---\n")
+            fingerprint = skill_directory_fingerprint(str(expected))
+            with patch("subprocess.Popen") as mock_popen:
+                result = execute(
+                    "prompt",
+                    tmpdir,
+                    "x",
+                    "Read",
+                    expected_skill_dir=str(expected),
+                    expected_skill_fingerprint=fingerprint,
+                )
+
+        assert result["status"] == "error"
+        assert result["skill_environment"]["competing_paths"] == [
+            os.path.realpath(competing)
+        ]
+        mock_popen.assert_not_called()
+
+
+class TestGitChangeComparison:
+    def test_reports_new_removed_and_changed_entries(self):
+        before = {
+            "head": "a",
+            "entries": {
+                "changed.txt": (("worktree",), "old"),
+                "removed.txt": (("untracked",), "old"),
+            },
+        }
+        after = {
+            "head": "a",
+            "entries": {
+                "changed.txt": (("worktree",), "new"),
+                "new.txt": (("untracked",), "new"),
+            },
+        }
+
+        assert _git_changes("/repo", before, after) == [
+            "changed.txt",
+            "new.txt",
+            "removed.txt",
+        ]
+
+    def test_snapshot_detects_net_change_from_any_writer(self, tmp_path):
+        subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
+        target = tmp_path / "artifact.txt"
+
+        before = _git_snapshot(str(tmp_path))
+        target.write_text("created by an arbitrary tool")
+        after = _git_snapshot(str(tmp_path))
+
+        assert _git_changes(str(tmp_path), before, after) == ["artifact.txt"]
+
+
+class TestSkillDirectoryFingerprint:
+    def test_changes_for_reference_content(self, tmp_path):
+        skill_dir = tmp_path / "skill"
+        references = skill_dir / "references"
+        references.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text("---\nname: x\n---\n")
+        reference = references / "rules.md"
+        reference.write_text("old")
+
+        original = skill_directory_fingerprint(str(skill_dir))
+        reference.write_text("new")
+        changed_content = skill_directory_fingerprint(str(skill_dir))
+
+        assert original != changed_content
+
+    def test_environment_becomes_invalid_if_skill_changes(self, tmp_path):
+        skill_dir = tmp_path / ".claude" / "skills" / "x"
+        skill_dir.mkdir(parents=True)
+        skill_file = skill_dir / "SKILL.md"
+        skill_file.write_text("---\nname: x\n---\n")
+        fingerprint = skill_directory_fingerprint(str(skill_dir))
+
+        before = _skill_environment_before(
+            str(tmp_path), "x", str(skill_dir), fingerprint, False
+        )
+        skill_file.write_text("---\nname: x\n---\nchanged")
+        after = _skill_environment_after(before, str(tmp_path), "x")
+
+        assert before["valid"] is True
+        assert after["valid"] is False
+        assert after["actual_fingerprint_after"] != fingerprint

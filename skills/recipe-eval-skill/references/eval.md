@@ -1,326 +1,210 @@
 # Evaluation Protocol
 
-Executes after Phase A (skill authoring) completes. Uses `scripts/eval-executor.py` to run prompts via `claude -p` with skill auto-discovery enabled.
+Execute after Phase A produces user-approved skill content. Phase B treats the source skill as read-only and runs scripts/eval-executor.py through claude -p.
 
-## eval-executor.py Output Schema
+## Executor Output Contract
 
-```json
+~~~json
 {
   "result": "final task output text",
   "status": "success | partial | error",
   "exit_code": 0,
   "skill_discovered": true,
   "skill_invoked": true,
+  "skill_used": true,
+  "skill_usage_evidence": [{"method": "Skill | Read", "value": "skill-name or verified SKILL.md path"}],
+  "namespaced_skill_discoveries": ["plugin-name:skill-name"],
+  "namespaced_skill_invocations": ["plugin-name:skill-name"],
+  "skill_environment": {"mode": "expected | absent", "expected_path": "absolute path or null", "required_path": "canonical .claude/skills path in expected mode", "expected_fingerprint": "sha256 or null", "actual_fingerprint_before": "sha256 or null", "actual_fingerprint_after": "sha256 or null", "competing_paths": [], "valid": true},
+  "base_sha": "git commit used to create the worktree",
   "files_modified": ["path/to/file"],
-  "tools_used": ["Skill", "Read", "Write"],
+  "tools_used": ["Read", "Bash"],
   "error": "only on error or partial"
 }
-```
+~~~
 
-`files_modified` tracks Write, Edit, MultiEdit tool calls only. Bash-based file operations are not tracked.
+skill_invoked means the Skill tool named the project skill by exact name. A namespaced plugin match is diagnostic evidence and invalidates the run rather than satisfying skill_used. skill_used is true only when the verified environment contains exactly the expected skill copy and either Skill named the target exactly or Read opened that exact expected SKILL.md. files_modified is derived from the git working-tree state before and after execution, so changes made through Bash or NotebookEdit are included.
 
-## Prerequisites from Phase A
+## Required Phase A Handoff
 
-| Field | Source | How to resolve |
-|-------|--------|----------------|
-| Skill name | `name` field from skill frontmatter | Used as `--skill-name` parameter |
-| Source skill directory | Where Phase A wrote the skill files | Absolute path to the directory containing SKILL.md |
-| Original SKILL.md content | Update mode only: saved before overwrite in Phase A Step 6 | Stored in orchestrator context as string |
-| Plugin path | Directory containing this plugin's `skills/` | Resolve via `Glob: **/recipe-eval-skill/scripts/eval-executor.py`, take parent 3 levels up |
-| User phrases | Phrases collected in Phase A (skill-dependent and pattern-copyable) | Reference material for trigger query generation |
-| Trigger scenarios | Scenarios collected in Phase A | Reference material for trigger query generation |
+| Field | Source | Use |
+|---|---|---|
+| Skill name | Skill frontmatter | --skill-name |
+| Source skill directory | Phase A write | Worktree copy source |
+| Old skill directory snapshot + fingerprint | Update mode only, captured before any write | Complete old-version setup |
+| Approved source directory fingerprint | Phase A final state | New/with-skill verification |
+| Base SHA | Resolve once at Phase B start | Every worktree and result |
+| Held-out test requests | Verbatim skill-dependent user requests | Direct trigger and execution input |
+| Trigger scenarios | Phase A dialog | Scope validation only |
+| Plugin path | Location of this script | Executor path |
 
-## First Action
+The evaluation gate is blocked unless at least two complete held-out skill-dependent requests are available. Preserve held-out wording; generated description-aligned queries are diagnostics, not evidence of real trigger behavior.
 
-Register Steps 1-7 using TaskCreate before any execution:
+Compute source and snapshot fingerprints with:
 
-1. Orphan cleanup + Trigger check
-2. Trigger fail handling (conditional)
-3. Determine test task
-4. Create worktrees + Parallel execution
-5. Blind comparison
-6. Worktree cleanup
-7. Combined report
+~~~bash
+python3 {plugin_path}/skills/recipe-eval-skill/scripts/eval-executor.py \
+  --fingerprint-skill-dir "{skill_directory}"
+~~~
 
-## Step 1: Orphan Cleanup + Trigger Check
+For a side expected to use the skill, invoke the executor with both `--expected-skill-dir "{absolute installed directory}"` and `--expected-skill-fingerprint "{recorded source fingerprint}"`. For creation baseline, use `--expect-skill-absent`. The executor restricts Claude setting sources to project and local configuration, disables auto memory, and rejects namespaced plugin invocations so external same-name skills do not satisfy the check.
 
-### Orphan Cleanup
+## State Sequence
 
-Clean up any leftover worktrees from previous runs:
+Register these states before execution and complete them in order:
 
-```bash
+1. cleanup_and_trigger
+2. trigger_diagnosis
+3. paired_execution
+4. blind_assessment
+5. identity_reveal
+6. cleanup
+7. combined_report
+
+Each state records pass, blocked, or inconclusive plus its evidence. A later state starts only when the prior transition below permits it.
+
+## 1. Cleanup and Trigger Check
+
+Run orphan cleanup, then select one held-out request whose scenario is inside the skill scope:
+
+~~~bash
 ./scripts/worktree-cleanup.sh --orphans [repo_root]
-```
+~~~
 
-### Generate Trigger Query
+Resolve one base SHA before creating any worktree. Create a fresh worktree at that exact SHA, remove every competing target-skill discovery path, install only the approved skill version under .claude/skills/{skill_name}/, and verify its directory fingerprint. Execute the held-out request verbatim. Retry the same request up to three times because discovery and use can vary. Recreate the worktree at the pinned SHA before each attempt.
 
-Generate a test query that is likely to trigger skill invocation. The query must be one that the LLM would judge as requiring the skill's knowledge to complete.
+Trigger passes when:
 
-**Inputs** (all are reference material, not direct sources):
-- Skill description (from frontmatter)
-- Skill content (key rules, patterns, terminology)
-- User phrases from Phase A (how the team talks about this work)
-- Trigger scenarios from Phase A
+- status is success;
+- skill_discovered is true; and
+- skill_used is true.
+- skill_environment.valid is true; and
+- base_sha equals the pinned Phase B SHA.
 
-**Generation criteria**:
-1. The query must use terminology that aligns with the skill's description — this is what the LLM matches against when deciding to invoke
-2. The query must request work that cannot be completed by reading existing code alone (e.g., review against rules, implement a pattern not yet in the codebase)
-3. Generate 3 candidate queries, select the one with highest coverage of the skill's core purpose
+A direct target-SKILL.md Read satisfies use even when skill_invoked is false. Discovery failure caused by an incorrect installation path does not consume an attempt.
 
-**Why generation instead of user phrases**: User phrases describe real usage scenarios but may not align with the description's terminology. The LLM decides to invoke based on description match, not on whether the skill's knowledge is theoretically needed.
+Report the exact request, attempts, discovery, use, usage evidence, and status.
 
-### Execute
+## 2. Trigger Diagnosis
 
-Create a worktree. The script creates two worktrees (required by its interface); use only the first:
+Skip when the trigger gate passed. After three failed attempts, classify using observed evidence:
 
-```bash
-./scripts/worktree-create.sh [repo_root] trigger-check trigger-check-unused
-mkdir -p {worktree_trigger_path}/.claude/skills/
-cp -r {source_skill_directory} {worktree_trigger_path}/.claude/skills/{skill_name}
-```
+| Diagnosis | Evidence | Transition |
+|---|---|---|
+| Installation failure | Target absent from init discovery list | Repair worktree setup and rerun State 1 |
+| Held-out request out of scope | Request does not require a documented skill rule | Select another user-provided held-out request and rerun State 1 |
+| General-knowledge overlap | Skill adds no project/product/organization-specific decision rule | Stop with blocked; recommend content authoring |
+| Description mismatch | Request needs a specific skill rule, skill is installed, but remains unused | Return needs_authoring_revision to Phase A |
+| Namespaced plugin collision | namespaced_skill_invocations contains a plugin skill with the same short name | Treat the attempt as invalid, disable the collision, and rerun State 1 in a fresh worktree |
+| Execution failure | CLI/task error prevents a trigger observation | Stop with diagnostics; no trigger conclusion |
 
-Run:
+Phase B performs no source writes. For needs_authoring_revision, return the evidence and held-out request to Phase A. Phase A may invoke skill-creator and skill-reviewer, present the proposed description to the user, and write it only after approval. Then restart Phase B from State 1. Once a failed held-out request is exposed to authoring, retire it from evaluation and select an untouched held-out request for the restarted Phase B. Ask for a new verbatim request if none remain.
+Allow at most two approved description revisions; persistent failure is blocked.
 
-```bash
-python3 {plugin_path}/skills/recipe-eval-skill/scripts/eval-executor.py \
-  --prompt "{selected_trigger_query}" \
-  --cwd "{worktree_trigger_path}" \
-  --skill-name "{skill_name}"
-```
+## 3. Sequential Paired Execution
 
-### Evaluate with Retry
+Target three valid trials, with a maximum of five total trial attempts. Every attempt uses fresh worktrees at the pinned base SHA. Execute the two sides sequentially; alternate order between trials to reduce order effects. Concurrent claude -p calls are outside this protocol because they can interfere with skill discovery.
 
-Skill invocation is non-deterministic — the LLM may choose to read SKILL.md directly via Read tool instead of using the Skill tool. A single `skill_invoked: false` does not indicate a trigger problem. Retry up to 3 times with the same query before diagnosing.
+### Environment Expectations
 
-**Per attempt**:
-1. Create worktree, copy skill, run eval-executor.py (as above)
-2. Clean up worktree:
-```bash
-./scripts/worktree-cleanup.sh [repo_root] {worktree_trigger_path}
-```
-3. Check result:
-   - `skill_discovered: false` → Fix path and retry (does not count toward the 3 attempts)
-   - `skill_invoked: true` → Trigger pass. Proceed to Step 3.
-   - `skill_invoked: false` → Retry (create fresh worktree)
+| Mode | Side A | Side B |
+|---|---|---|
+| Creation | baseline: remove target from every discovery path | with-skill: install approved skill |
+| Update | old-version: install complete saved directory snapshot | new-version: install complete approved source directory |
 
-If `skill_invoked: false` after 3 attempts → Proceed to Step 2.
+Required use conditions:
 
-### Present Trigger Result
+| Mode | Side | skill_discovered | skill_used |
+|---|---|---:|---:|
+| Creation | baseline | false | false |
+| Creation | with-skill | true | true |
+| Update | old-version | true | true |
+| Update | new-version | true | true |
 
-```
-## Trigger Check Result
-- **Query**: {selected_trigger_query}
-- **Discovered**: {skill_discovered}
-- **Invoked**: {skill_invoked}
-- **Attempts**: {n}/3
-- **Diagnosis**: {pass / proceeding to diagnosis}
-```
+For each trial:
 
-## Step 2: Trigger Fail Handling (conditional)
+1. Create and configure both worktrees.
+2. Remove all competing target copies, copy the complete expected directory, and verify the copied directory against its Phase A fingerprint. Creation baseline verifies target absence instead.
+3. Run the held-out request unchanged on each side, sequentially, passing the expected absolute skill path and fingerprint to eval-executor.
+4. Retry a side in a fresh worktree up to three times when its required use condition is unmet.
+5. Mark the pair valid only when both statuses are success, both base_sha values equal the pinned SHA, both skill environments are valid, neither side reports a namespaced plugin invocation, and both sides satisfy the use table.
+6. Store the paired result text and metadata, then clean both worktrees.
 
-Skip this step if trigger passed in Step 1.
+Never substitute the “best available” result for a failed requirement. Keep failed attempts as diagnostics. Continue trial attempts until three valid pairs are collected or five total trials have been attempted. Proceed with reduced confidence when two valid pairs remain; fewer than two is inconclusive.
 
-This step is reached only after 3 consecutive `skill_invoked: false` results. At this point the cause is likely structural, not LLM non-determinism.
+## 4. Blind Assessment
 
-### Diagnose Root Cause
+Invoke skill-eval-reporter with anonymized valid pairs only:
 
-1. **Query-skill mismatch**: The query can be completed by reading existing code alone. → Generate a new query with stronger alignment to the skill's description. Re-run Step 1 (3-attempt cycle).
+~~~text
+Test task: {verbatim held-out request}
+Eval mode: {creation|update}
 
-2. **General knowledge overlap**: The skill content restates knowledge the LLM already has. → Report to user: "This skill's content overlaps with the LLM's baseline knowledge. The skill needs project-specific rules or patterns to provide value." → Stop evaluation.
+Trial 1:
+  Result A: {text}
+  Result B: {text}
+...
+~~~
 
-3. **Description mismatch**: The skill contains project-specific value but the description does not align with user intent. → Revise description (see below).
+Pass no identity, prompt/skill content, change summary, tool metadata, or failed-attempt metadata. The reporter must finish its dimension judgments and lock its blind recommendation before reveal.
 
-**Diagnostic flow**:
-1. Check whether the query can be completed by reading existing code alone. If yes → #1.
-2. Check whether the skill body contains project-specific content (class names, file paths, team conventions). If only general principles → #2. If specific content but description misaligned → #3.
+## 5. Identity Reveal
 
-### Description Revision (for cause #3, max 2 iterations)
+After the blind output is complete, send:
 
-1. Invoke rashomon:skill-creator to revise the description:
-```
-subagent_type: rashomon:skill-creator
-description: "Revise skill description for trigger"
-prompt: |
-  Mode: modification
-  Skill name: {skill_name}
-  Existing content: {current full SKILL.md content}
-  Modification request: The description failed to trigger auto-discovery
-    after 3 attempts. Revise the description applying the Tier 1 description
-    quality checklist from prompt-optimization/references/skills.md.
-    User phrases for reference: {user_phrases from Phase A}.
-    The revised description must focus on user intent and align with
-    how users request this kind of work, while maintaining balance
-    to avoid over-fitting to specific queries.
-  Current review: {trigger fail diagnosis}
-```
+~~~text
+Identity mapping:
+  A = {baseline|old-version}
+  B = {with-skill|new-version}
 
-2. Invoke rashomon:skill-reviewer to verify the revised description.
+Full metadata for each valid trial:
+  status, base_sha, skill_discovered, skill_invoked, skill_used,
+  skill_usage_evidence, namespaced_skill_discoveries,
+  namespaced_skill_invocations, skill_environment, files_modified, tools_used
 
-3. Write the revised SKILL.md to the source skill directory.
+Target skill content:
+  {approved SKILL.md and relevant references}
+~~~
 
-4. Re-run Step 1 (3-attempt cycle) with the revised description.
+The post-reveal analysis may associate consistent output differences with skill availability or version. It must label causal explanations as hypotheses unless an output difference maps to a specific skill rule and repeats across valid trials.
 
-**CRITICAL**: If trigger fails after 2 description revisions (each with 3-attempt cycles), stop evaluation. Report the trigger failure and recommend skill content revision.
+## 6. Cleanup
 
-## Step 3: Determine Test Task
+Track every created worktree, result directory, and old-skill snapshot directory. Clean each in a finalization step on success, failure, timeout, or blocked transitions.
 
-Use the same query that passed trigger check in Step 1. Skill invocation is non-deterministic, so the A/B execution includes its own retry logic (Step 4). The trigger-checked query is the best available candidate.
+## 7. Combined Report
 
-## Step 4: Create Worktrees + Sequential Execution
+Return:
 
-### Create Worktrees
-
-Skills must be at `.claude/skills/{skill_name}/` for auto-discovery.
-
-**CRITICAL**: `{source_skill_directory}` is the directory Phase A wrote to. In update mode, this directory already contains the NEW version (Phase A overwrote it). The OLD version exists only as a string saved in orchestrator context.
-
-**Creation mode**:
-```bash
-./scripts/worktree-create.sh [repo_root] baseline with-skill
-# worktree-A (baseline): remove target skill from all discovery paths
-rm -rf {worktree_a_path}/.claude/skills/{skill_name}
-rm -rf {worktree_a_path}/skills/{skill_name}
-# worktree-B (with-skill): copy new skill
-mkdir -p {worktree_b_path}/.claude/skills/
-cp -r {source_skill_directory} {worktree_b_path}/.claude/skills/{skill_name}
-```
-
-**Update mode**:
-```bash
-./scripts/worktree-create.sh [repo_root] old-version new-version
-# worktree-A (old-version): copy current skill, then restore original SKILL.md
-mkdir -p {worktree_a_path}/.claude/skills/
-cp -r {source_skill_directory} {worktree_a_path}/.claude/skills/{skill_name}
-```
-Then use Write tool to overwrite `{worktree_a_path}/.claude/skills/{skill_name}/SKILL.md` with the original content string saved from Phase A.
-```bash
-# worktree-B (new-version): source_skill_directory already contains the updated version
-mkdir -p {worktree_b_path}/.claude/skills/
-cp -r {source_skill_directory} {worktree_b_path}/.claude/skills/{skill_name}
-```
-
-### Sequential Execution with Retry
-
-**CRITICAL**: Execute sequentially. Do NOT parallelize with `&` or concurrent Task calls. Parallel `claude -p` invocations interfere with skill auto-discovery.
-
-Each side must achieve `skill_invoked: true`. If `skill_invoked: false`, retry that side (up to 3 attempts) with a fresh worktree. The A/B comparison is only meaningful when both sides invoked the skill.
-
-```bash
-eval_tmpdir=$(mktemp -d)
-```
-
-**Side A** (retry until `skill_invoked: true`, max 3 attempts):
-```bash
-python3 {plugin_path}/skills/recipe-eval-skill/scripts/eval-executor.py \
-  --prompt "{test_task_description}" \
-  --cwd "{worktree_a_path}" \
-  --skill-name "{skill_name}" > "$eval_tmpdir/result-a.json"
-```
-Check `skill_invoked` in result. If `false`, recreate worktree-A with same skill setup and re-run. After 3 failures, proceed with the best available result.
-
-**Side B** (same retry logic):
-```bash
-python3 {plugin_path}/skills/recipe-eval-skill/scripts/eval-executor.py \
-  --prompt "{test_task_description}" \
-  --cwd "{worktree_b_path}" \
-  --skill-name "{skill_name}" > "$eval_tmpdir/result-b.json"
-```
-
-After both complete, read the result files:
-```bash
-cat "$eval_tmpdir/result-a.json"
-cat "$eval_tmpdir/result-b.json"
-```
-
-Parse each JSON and extract the `result` field for Step 5 Phase 1 and all fields for Step 5 Phase 2.
-
-## Step 5: Blind Comparison
-
-Invoke rashomon:skill-eval-reporter in two phases.
-
-**Phase 1: Blind assessment**
-
-**Agent tool invocation**:
-```
-subagent_type: rashomon:skill-eval-reporter
-description: "Blind A/B comparison"
-prompt: |
-  Evaluate these two execution results purely on output quality.
-
-  Test task: {test_task_description}
-  Eval mode: {creation|update}
-
-  Result A:
-  {result field from result-a.json}
-
-  Result B:
-  {result field from result-b.json}
-```
-
-**CRITICAL**: Pass only `result` text in Phase 1. Metadata is reserved for Phase 2 after blind assessment completes.
-
-**Phase 2: Identity reveal**
-
-After reporter produces blind Recommendation, send follow-up via SendMessage:
-
-```
-Identity reveal:
-  Result A = {baseline|old-version}
-  Result B = {with-skill|new-version}
-
-Metadata A:
-  skill_discovered: {bool}
-  skill_invoked: {bool}
-  files_modified: {list}
-  tools_used: {list}
-
-Metadata B:
-  skill_discovered: {bool}
-  skill_invoked: {bool}
-  files_modified: {list}
-  tools_used: {list}
-
-Perform Step 4 (Skill Usage Analysis) with this data.
-```
-
-## Step 6: Worktree Cleanup
-
-```bash
-./scripts/worktree-cleanup.sh [repo_root] {worktree_a_path} {worktree_b_path}
-rm -rf "$eval_tmpdir"
-```
-
-Always execute, even on failure.
-
-## Step 7: Combined Report
-
-```markdown
+~~~markdown
 # Skill Evaluation Summary
 
 ## Phase A: Skill Quality
-- **Grade**: {A/B/C}
-- **Key findings**: {summary}
+- Grade: {A|B|C}
+- Key findings: {summary}
 
-## Phase B: Trigger Check
-- **Query**: {query}
-- **Discovered**: {yes/no}
-- **Invoked**: {yes/no}
-- **Diagnosis**: {pass / general knowledge overlap / description mismatch}
+## Phase B: Trigger
+- Request: {verbatim held-out request}
+- Discovered: {yes|no|unknown}
+- Used: {yes|no|unknown}
+- Evidence: {Skill invocation or direct Read}
+- Diagnosis: {pass|blocked reason}
 
-## Phase B: Execution Effectiveness
-{Only present if trigger passed}
-- **Winner**: {A/B/Neither} → {baseline|old → with-skill|new}
-- **Assessment**: {clear winner / marginal / equivalent / trade-off}
-- **Confidence**: {high/medium/low}
-
-### Skill Usage
-- **Baseline**: skill_invoked={bool}, tools_used={list}
-- **With-skill**: skill_invoked={bool}, tools_used={list}
+## Phase B: Execution
+- Valid pairs: {n} (target 3, maximum 5 trial attempts)
+- Status: {complete|inconclusive}
+- Blind assessment: {reporter result, only when complete}
+- Observed association: {evidence-proportional statement}
 
 ## Recommendation
-- **ship**: Grade A/B + trigger pass + clear improvement
-- **revise**: Grade B + trigger pass + marginal or no improvement
-- **revise (trigger)**: Trigger fail due to description mismatch — revise description
-- **revise (content)**: Trigger fail due to general knowledge overlap — add project-specific content
-- **reject**: Grade C, or trigger fail persists after revision
-```
+{ship|revise|reject|collect more evidence}
+~~~
+
+Recommendation rules:
+
+- ship: grade A/B, trigger pass, at least two valid pairs, and repeatable non-regressing benefit.
+- revise: authoring or trigger evidence identifies a concrete correctable issue.
+- reject: grade C or the skill adds no project-specific execution value.
+- collect more evidence: comparison is inconclusive or differences do not repeat.
+
+An inconclusive comparison has no winner and makes no skill-effectiveness recommendation.

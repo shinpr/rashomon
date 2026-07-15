@@ -16,7 +16,7 @@
 
 - Built a skill but unsure if it actually changes agent behavior?
 - Iterating on skills and prompts by gut feel instead of evidence?
-- Want proof that your changes made things better, not just different?
+- Want repeatable evidence that your changes made things better, not just different?
 
 **rashomon** evaluates skills and prompts through blind comparison — running tasks with and without your changes in isolated environments, then comparing real outputs without knowing which version produced which.
 
@@ -40,9 +40,11 @@ Not ideal if:
 ```
 
 Creates a skill through interactive dialog, then evaluates effectiveness:
+
 1. Collects domain knowledge, project-specific rules, and trigger phrases
 2. Generates optimized skill content (graded A/B/C)
-3. Runs a test task with and without the skill in isolated environments, using blind A/B comparison
+3. Runs up to three valid paired trials with and without the skill,
+   using at most five attempts, then compares the outputs blindly
 
 **What the evaluation report looks like:**
 
@@ -50,13 +52,13 @@ Creates a skill through interactive dialog, then evaluates effectiveness:
 Skill Quality: Grade A
 - Project-specific rules clearly encoded, no critical issues
 
-Trigger Check: pass (discovered + invoked)
+Trigger Check: pass (loaded through the Skill tool or its SKILL.md file)
 
 Execution Effectiveness:
 - Winner: with-skill
-- Assessment: structural improvement
-- Key difference: 3-stage catch ordering and retry constraints
-  applied correctly (attributed to skill Rules 3 and 6)
+- Assessment: repeatable structural improvement across valid pairs
+- Key difference: Retry constraints and three-stage catch ordering were applied
+  consistently (linked to skill Rules 3 and 6)
 
 Recommendation: ship
 ```
@@ -75,7 +77,8 @@ See a real-world example: [I Built a Skill Reviewer. Then I Ran It on Itself.](h
 /recipe-eval-prompt Write a function to sort an array
 ```
 
-Analyzes prompt issues, generates an improved version, runs both in isolated environments, and shows what actually changed.
+Analyzes prompt issues, generates an improved version, and runs the original and optimized prompts
+in up to three blind, paired trials. The report highlights differences that recur across trials.
 
 <details>
 <summary>Prompt Evaluation Details</summary>
@@ -172,12 +175,12 @@ For complex tasks that need more time, just mention it in natural language:
 Skill Evaluation (/recipe-eval-skill)
     ├── skill-creator (generates/modifies skills)
     ├── skill-reviewer (grades quality A/B/C)
-    ├── eval-executor ×2 (isolated worktrees)
+    ├── eval-executor (up to 3 valid pairs, sequential within each pair)
     └── skill-eval-reporter (blind A/B comparison)
 
 Prompt Evaluation (/recipe-eval-prompt)
     ├── prompt-analyzer (analyzes and optimizes)
-    ├── prompt-executor ×2 (isolated worktrees)
+    ├── prompt-executor (up to 3 valid pairs, parallel within each pair)
     └── report-generator (compares results)
 ```
 
@@ -214,14 +217,14 @@ Both skill review and prompt analysis check against 8 common patterns:
 | Priority | Issues |
 |----------|--------|
 | **Critical** | Negative instructions ("don't do X"), vague instructions, missing output format |
-| **High Impact** | Unstructured prompts, missing context, complex tasks without breakdown |
-| **Enhancement** | Biased examples, no permission for uncertainty |
+| **High Impact** | Unstructured prompts, missing or excess context, complex tasks without gates |
+| **Enhancement** | Unnecessary or biased examples, missing uncertainty handling |
 
 ### P1: Critical (Must Fix)
 
 | ID | Pattern | Problem | Fix |
 |----|---------|---------|-----|
-| BP-001 | Negative Instructions | "Don't do X" often backfires—LLMs focus on what's mentioned | Reframe positively: "Don't include opinions" → "Include only factual information" |
+| BP-001 | Negative Instructions | A prohibition can prime the forbidden behavior without naming the target state | Lead with the desired behavior; retain narrow prohibitions for irreversible actions |
 | BP-002 | Vague Instructions | Missing specifics cause high output variance | Add explicit constraints: format, length, scope, tone |
 | BP-003 | Missing Output Format | No format spec leads to inconsistent outputs | Define expected structure: JSON schema, section headers, etc. |
 
@@ -230,15 +233,18 @@ Both skill review and prompt analysis check against 8 common patterns:
 | ID | Pattern | Problem | Fix |
 |----|---------|---------|-----|
 | BP-004 | Unstructured Prompt | Wall of text obscures priorities | Apply 4-block pattern: Context / Task / Constraints / Output Format |
-| BP-005 | Missing Context | No background leads to wrong assumptions | Add purpose, audience, relevant constraints |
-| BP-006 | Complex Task | Undivided complex tasks have higher error rates | Break into steps with quality checkpoints |
+| BP-005 | Missing or Excess Context | Missing facts force guesses; excess facts obscure operative instructions | Supply decision-sufficient context and condense the rest |
+| BP-006 | Complex Task Without Gates | A model can jump past prerequisites to a later result | Break into states with completion evidence and transition conditions |
 
 ### P3: Enhancement (Could Fix)
 
 | ID | Pattern | Problem | Fix |
 |----|---------|---------|-----|
-| BP-007 | Biased Examples | Homogeneous examples cause overfitting | Diversify: include edge cases, different formats |
-| BP-008 | No Uncertainty Permission | No "I don't know" option causes hallucination | Add: "If unsure, say so" |
+| BP-007 | Unnecessary or Biased Examples | Generic examples consume context and anchor unrelated details | Use examples only for non-obvious domain or organization-specific mappings |
+| BP-008 | Missing Uncertainty Handling | Unknown inputs have no defined next action | Classify evidence and stop at a gate when required input is unresolved |
+
+Prompt optimization keeps analysis, optimization, and balance state in one gated JSON response.
+It avoids intermediate analysis files, so the skill does not depend on a specific agent or filesystem layout.
 
 </details>
 

@@ -7,7 +7,7 @@ Steps for modifying an existing skill with targeted changes and optimization.
 1. Glob existing skills: `.claude/skills/*/SKILL.md`, `~/.claude/skills/*/SKILL.md`
 2. If user specified a skill name or path: select it as target
 3. If no match or ambiguous: list available skills and ask user to select
-4. Read the target SKILL.md and any files in its `references/` directory
+4. Read the target SKILL.md and inventory the complete skill directory, including references, scripts, assets, and other files
 5. Present a brief summary of the skill's current scope and structure
 
 ## Step 2: Collect Modification Request
@@ -22,12 +22,12 @@ If the user's initial prompt already describes the change and reason, acknowledg
 
 If a design decision with discrete options is needed (e.g., scope level, approach selection), use AskUserQuestion.
 
-**Round 2: Trigger Phrases**
+**Round 2: Held-Out Test Requests**
 
 Present these questions as plain text and wait for the user's response:
-- What phrases does your team use when requesting work that this skill covers? (needed for Phase B trigger testing)
+- What complete requests does your team actually send for work this skill covers? Provide at least two skill-dependent requests verbatim. Keep them out of new description examples; Phase B uses one directly and reserves another for retesting after any authoring revision.
 
-After collecting responses, classify each phrase as **skill-dependent** (requires the skill's knowledge) or **pattern-copyable** (can be completed by copying existing code). If all phrases are pattern-copyable, ask the user for at least one skill-dependent phrase.
+After collecting responses, classify each request as **skill-dependent** (requires the skill's knowledge) or **pattern-copyable** (can be completed by copying existing code). Ensure at least two complete skill-dependent requests. Hold both out from authoring examples.
 
 **Round 3 (if needed): Clarification**
 
@@ -69,6 +69,7 @@ prompt: |
   {for each file in references/: filename and content}
   {if no references exist: "No reference files"}
   Modification request: {user's change description from Step 2}
+  User phrases for description: {non-held-out phrases from Round 2}
   Current review: {skill-reviewer output from Step 3}
 ```
 
@@ -103,10 +104,28 @@ Present grade, patternIssues, principlesEvaluation, and actionItems to user.
 3. Display the `changesSummary` from rashomon:skill-creator output
 4. Use AskUserQuestion: "Please review the changes above. Is there anything you'd like to adjust?"
 5. If revision requested: collect specific feedback, return to Step 4
-6. Upon approval, overwrite the target SKILL.md
+6. Immediately before the first write, create a byte-preserving snapshot of the complete source skill directory under a temporary root:
+   - Compute the source-directory fingerprint before copying
+   - Copy SKILL.md, references, scripts, assets, symlinks, and every other entry
+   - Compute the snapshot fingerprint with eval-executor.py and require it to equal the source fingerprint; a mismatch blocks the write
+   - Keep the snapshot read-only for Phase B
+7. Upon approval, overwrite the target SKILL.md
    - If new references were created: write to `references/` directory
    - If existing references were modified: overwrite affected files
-**CRITICAL**: Save the original SKILL.md content before overwriting — it is needed for Phase B (eval) as the "old version".
+8. After all approved writes, compute and record the complete new source-directory fingerprint.
+
+The old snapshot and new source directory are the only update-evaluation inputs. A saved SKILL.md string is insufficient because references, scripts, and assets affect execution.
+
+Use a directory-preserving copy and compare both fingerprints before writing the source:
+
+```bash
+snapshot_root=$(mktemp -d "${TMPDIR:-/tmp}/rashomon-old-skill.XXXXXX")
+python3 {plugin_path}/skills/recipe-eval-skill/scripts/eval-executor.py \
+  --fingerprint-skill-dir "{source_skill_directory}"
+cp -R "{source_skill_directory}" "$snapshot_root/{skill_name}"
+python3 {plugin_path}/skills/recipe-eval-skill/scripts/eval-executor.py \
+  --fingerprint-skill-dir "$snapshot_root/{skill_name}"
+```
 
 **Phase A complete. Proceed to eval.md for Phase B.**
 
@@ -118,18 +137,21 @@ Phase A must pass the following to Phase B (eval.md). The orchestrator carries t
 |------|--------|---------|
 | Skill name | Step 1 | `--skill-name` parameter |
 | Source skill directory | Step 6 write location | Worktree copy source |
-| Original SKILL.md content | Step 6 (saved before overwrite) | Old version for A/B comparison |
-| User phrases | Round 2 (both categories) | Reference material for trigger query generation |
-| Trigger scenarios | Round 1-2 | Reference material for trigger query generation |
+| Old skill directory snapshot | Step 6, captured before any write | Complete old-version input |
+| Old directory fingerprint | Step 6 | Verify old installation identity |
+| New directory fingerprint | Step 8 | Verify new installation identity |
+| Held-out test requests | Round 2 (verbatim, skill-dependent) | Direct input for trigger and effectiveness checks |
+| Other user phrases | Round 2 | Description authoring context; excluded from test selection |
+| Trigger scenarios | Round 1-2 | Validate that the held-out request is in scope |
 
 ## Completion Criteria
 
 - [ ] Target skill identified and read
 - [ ] Modification request collected and confirmed
-- [ ] User phrases collected and classified (at least 1 skill-dependent)
+- [ ] Complete user requests collected and classified (at least two held-out skill-dependent requests)
 - [ ] Current state analyzed by rashomon:skill-reviewer
 - [ ] rashomon:skill-creator applied targeted modifications
 - [ ] rashomon:skill-reviewer returned grade A or B for modified content
 - [ ] User approved changes via diff review
 - [ ] Modified file written to original location
-- [ ] Original content preserved for Phase B eval
+- [ ] Complete original skill directory and fingerprint preserved for Phase B eval

@@ -16,6 +16,7 @@ Apply execution scope per worktree-execution skill "Worktree Management" section
 ## Input
 
 - Working directory (worktree path)
+- Expected base SHA pinned by the evaluation orchestrator
 - Prompt text
 - Task description
 
@@ -36,6 +37,7 @@ Execute prompt in assigned worktree, capture outputs, report results. Return str
 
 Before execution, verify:
 - Working directory is the assigned worktree (not main repository)
+- `git rev-parse HEAD` equals the pinned evaluation base SHA; record it before any task action
 - Required context files are accessible
 - No conflicts with other processes
 
@@ -92,6 +94,8 @@ execution_result:
 
 execution_context:
   worktree_path: {path}
+  expected_base_sha: {commit supplied by the evaluation orchestrator}
+  base_sha: {commit observed before execution}
   prompt_type: original | optimized
   task_description: {task}
 ```

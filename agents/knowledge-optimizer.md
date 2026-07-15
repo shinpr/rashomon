@@ -62,7 +62,7 @@ Correlate feedback with applied optimizations:
 |----------|----------|
 | Clearly better | Confirm optimizations were effective |
 | About the same | Differences were likely variance-level |
-| Worse | Identify which optimization caused regression |
+| Worse | Identify optimizations associated with the regression and record causal hypotheses separately |
 
 ### Step 3: Knowledge Adjustment
 
@@ -73,7 +73,7 @@ Based on analysis:
 - Target: Patterns that contributed to improvement
 
 **Decrease Confidence** (-0.2):
-- When: Pattern led to worse result
+- When: Repeated comparison evidence and user feedback associate a pattern with a worse result
 - Target: The specific pattern
 
 **Remove Entry**:
@@ -84,6 +84,7 @@ Based on analysis:
 - When: User provides new project-specific insight
 - Validation: Ensure not covered by standard patterns (BP-001~008)
 - Confidence: Follow knowledge-base skill "Confidence Assignment" (single feedback: 0.5-0.7 max)
+- Provenance: Record source, source fingerprint, validity scope, last verified time, and invalidation condition
 
 **Merge Entries**:
 - When: User identifies duplicates
@@ -101,11 +102,11 @@ When at capacity and adding new entry:
 3. If new > lowest existing: remove lowest, add new
 4. Otherwise: skip adding new entry
 
-**Key Principle**: Old entries are NOT penalized. Age does not affect retention score. Long-surviving entries may contain foundational project knowledge.
+Age alone does not affect retention. Revalidate entries whose source fingerprint changed or whose invalidation condition is now true before calculating retention.
 
 ### Step 5: Write Knowledge Base
 
-Read knowledge-base skill and execute according to Storage section.
+Read knowledge-base skill and execute according to Storage section. Increment `times_applied` only for entries that the completed comparison and user feedback confirm were used. Retrieval by prompt-analyzer remains read-only.
 
 Write updated knowledge base to the path specified in the skill.
 
@@ -135,6 +136,10 @@ changes_made:
     - entry: "..."
       confidence: 0.X
       source: "..."
+      source_fingerprint: "..."
+      validity_scope: "..."
+      last_verified: "..."
+      invalidated_when: "..."
   entries_merged:
     - from: ["...", "..."]
       to: "..."
@@ -156,10 +161,10 @@ If feedback seems inconsistent with evidence, ask clarifying questions.
 
 ## Preservation Principles
 
-**Old knowledge is valuable**:
-- Evaluate entries by confidence and usage, regardless of age
-- Long-surviving entries have proven useful over time
-- Retention scoring ignores age (confidence and usage only)
+**Validity-aware retention**:
+- Evaluate valid entries by confidence and confirmed usage, without a direct age penalty
+- Revalidate entries when their named invalidation condition or source fingerprint changes
+- Exclude unresolved stale entries from prompt retrieval
 
 **Conservative confidence changes**:
 - Single data points cause small adjustments only
@@ -181,6 +186,6 @@ Return results only when ALL conditions are confirmed:
 
 ## Adjustment Principles
 
-- Evaluate entries by confidence and usage (age-independent)
+- Evaluate valid entries by confidence and confirmed usage (no direct age penalty)
 - Apply small incremental changes from single data points
 - Require multiple confirmations for significant confidence changes

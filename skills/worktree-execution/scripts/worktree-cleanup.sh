@@ -1,135 +1,242 @@
 #!/bin/bash
 #
-# worktree-cleanup.sh
-# Removes specified worktrees or all rashomon worktrees
-#
-# Usage:
-#   worktree-cleanup.sh [repo_root]                    # Remove all rashomon worktrees
-#   worktree-cleanup.sh [repo_root] path1 path2 ...   # Remove specific worktrees
-#   worktree-cleanup.sh --orphans [repo_root]          # Remove orphaned worktrees only
-#
-# Exit codes:
-#   0 - Success (or nothing to clean)
-#   1 - Not a git repository
-#   2 - Cleanup failed (but best effort was made)
+# Remove registered Rashomon worktrees. Orphan cleanup skips locked worktrees so
+# an active long-running evaluation is never selected by age alone.
 
-set -uo pipefail
+set -o pipefail
 
-# Configuration
 ORPHAN_AGE_MINUTES=60
+MALFORMED_LOCK_AGE_MINUTES=1440
 
-# Parse arguments
 ORPHANS_ONLY=false
 if [[ "${1:-}" == "--orphans" ]]; then
     ORPHANS_ONLY=true
     shift
 fi
 
-# Get repository root
 REPO_ROOT="${1:-$(pwd)}"
 shift || true
 
-# Verify we're in a git repository
 if ! git -C "$REPO_ROOT" rev-parse --git-dir > /dev/null 2>&1; then
     echo "Error: Not a git repository: $REPO_ROOT" >&2
     exit 1
 fi
 
-# Get absolute path to repo root
 REPO_ROOT=$(cd "$REPO_ROOT" && git rev-parse --show-toplevel)
 BASE_PATH="${TMPDIR:-/tmp}"
+BASE_PATH=$(cd "$BASE_PATH" && pwd -P)
 
-# Function to remove a worktree
-remove_worktree() {
-    local path="$1"
-
-    if [[ -d "$path" ]]; then
-        echo "Removing worktree: $path" >&2
-        if git -C "$REPO_ROOT" worktree remove --force "$path" 2>&1; then
-            return 0
-        else
-            # If git worktree remove fails, try manual removal
-            echo "Warning: git worktree remove failed, attempting manual cleanup" >&2
-            rm -rf "$path" 2>/dev/null || true
-            return 0
-        fi
-    else
-        echo "Worktree not found: $path" >&2
-        return 0
-    fi
+registered_worktrees() {
+    git -C "$REPO_ROOT" worktree list --porcelain |
+        while IFS= read -r line; do
+            case "$line" in
+                "worktree "*) printf '%s\n' "${line#worktree }" ;;
+            esac
+        done
 }
 
-# Function to check if worktree is orphaned (older than threshold)
+is_registered() {
+    local target="$1"
+    local registered
+    while IFS= read -r registered; do
+        [[ "$registered" == "$target" ]] && return 0
+    done < <(registered_worktrees)
+    return 1
+}
+
+is_locked() {
+    local target="$1"
+    git -C "$REPO_ROOT" worktree list --porcelain |
+        awk -v target="$target" '
+            /^worktree / { current = substr($0, 10); next }
+            current == target && /^locked([[:space:]]|$)/ { found = 1 }
+            END { exit(found ? 0 : 1) }
+        '
+}
+
+lock_reason() {
+    local target="$1"
+    git -C "$REPO_ROOT" worktree list --porcelain |
+        awk -v target="$target" '
+            /^worktree / { current = substr($0, 10); next }
+            current == target && /^locked([[:space:]]|$)/ {
+                print substr($0, 8)
+                exit
+            }
+        '
+}
+
+lock_field() {
+    local reason="$1"
+    local key="$2"
+    local field
+    for field in $reason; do
+        case "$field" in
+            "$key"=*) printf '%s\n' "${field#*=}"; return 0 ;;
+        esac
+    done
+    return 1
+}
+
+process_is_alive() {
+    local pid="$1"
+    [[ "$pid" =~ ^[0-9]+$ ]] && kill -0 "$pid" > /dev/null 2>&1
+}
+
+validated_path() {
+    local requested="$1"
+    local parent
+    local name
+    local resolved_parent
+    local resolved
+
+    name="${requested##*/}"
+    parent="${requested%/*}"
+    [[ "$parent" == "$requested" ]] && parent="."
+
+    case "$name" in
+        worktree-rashomon-*) ;;
+        *)
+            echo "Error: Refusing non-Rashomon path: $requested" >&2
+            return 1
+            ;;
+    esac
+
+    if [[ ! -d "$parent" ]]; then
+        echo "Error: Worktree parent does not exist: $parent" >&2
+        return 1
+    fi
+    resolved_parent=$(cd "$parent" && pwd -P)
+
+    if [[ "$resolved_parent" != "$BASE_PATH" ]]; then
+        echo "Error: Refusing path outside temp root: $requested" >&2
+        return 1
+    fi
+
+    resolved="$resolved_parent/$name"
+    printf '%s\n' "$resolved"
+}
+
 is_orphaned() {
     local path="$1"
+    local mtime
+    local now
+    local age_minutes
+    local reason
+    local owner_pid
+    local lease_until
 
-    if [[ ! -d "$path" ]]; then
-        return 1
-    fi
-
-    # Get directory modification time
+    [[ -d "$path" ]] || return 1
     if [[ "$(uname)" == "Darwin" ]]; then
-        # macOS
-        local mtime=$(stat -f %m "$path")
+        mtime=$(stat -f %m "$path")
     else
-        # Linux
-        local mtime=$(stat -c %Y "$path")
+        mtime=$(stat -c %Y "$path")
+    fi
+    now=$(date +%s)
+    age_minutes=$(( (now - mtime) / 60 ))
+
+    if ! is_locked "$path"; then
+        [[ $age_minutes -ge $ORPHAN_AGE_MINUTES ]]
+        return
     fi
 
-    local now=$(date +%s)
-    local age_minutes=$(( (now - mtime) / 60 ))
+    reason=$(lock_reason "$path")
+    case "$reason" in
+        rashomon*) ;;
+        *) return 1 ;;
+    esac
 
-    if [[ $age_minutes -ge $ORPHAN_AGE_MINUTES ]]; then
+    owner_pid=$(lock_field "$reason" "owner_pid" || true)
+    lease_until=$(lock_field "$reason" "lease_until" || true)
+
+    if [[ "$owner_pid" =~ ^[0-9]+$ ]] &&
+       ! process_is_alive "$owner_pid" &&
+       [[ $age_minutes -ge $ORPHAN_AGE_MINUTES ]]; then
         return 0
-    else
-        return 1
     fi
+
+    if [[ "$lease_until" =~ ^[0-9]+$ ]] && [[ $now -ge $lease_until ]]; then
+        return 0
+    fi
+
+    if [[ ! "$lease_until" =~ ^[0-9]+$ ]] &&
+       [[ $age_minutes -ge $MALFORMED_LOCK_AGE_MINUTES ]]; then
+        return 0
+    fi
+    return 1
 }
 
-# Collect worktrees to remove
+remove_worktree() {
+    local requested="$1"
+    local path
+
+    if ! path=$(validated_path "$requested"); then
+        return 1
+    fi
+
+    if ! is_registered "$path"; then
+        echo "Worktree is not registered; nothing removed: $path" >&2
+        return 0
+    fi
+
+    git -C "$REPO_ROOT" worktree unlock "$path" > /dev/null 2>&1 || true
+    echo "Removing worktree: $path" >&2
+    if git -C "$REPO_ROOT" worktree remove --force "$path" 2>&1; then
+        return 0
+    fi
+
+    # Manual fallback remains bounded to a validated, registered Rashomon path.
+    if is_registered "$path"; then
+        echo "Warning: git removal failed; removing validated worktree directory" >&2
+        rm -rf "$path" 2>/dev/null || return 1
+        git -C "$REPO_ROOT" worktree prune > /dev/null 2>&1 || true
+        return 0
+    fi
+    return 1
+}
+
 WORKTREES_TO_REMOVE=()
+ERRORS=0
 
 if [[ $# -gt 0 ]]; then
-    # Specific worktrees provided as arguments
-    WORKTREES_TO_REMOVE=("$@")
+    for requested in "$@"; do
+        if path=$(validated_path "$requested"); then
+            WORKTREES_TO_REMOVE+=("$path")
+        else
+            ERRORS=$((ERRORS + 1))
+        fi
+    done
 elif [[ "$ORPHANS_ONLY" == "true" ]]; then
-    # Only orphaned worktrees
-    for dir in "$BASE_PATH"/worktree-rashomon-*; do
-        if [[ -d "$dir" ]] && is_orphaned "$dir"; then
-            echo "Found orphaned worktree: $dir (age > ${ORPHAN_AGE_MINUTES} minutes)" >&2
-            WORKTREES_TO_REMOVE+=("$dir")
+    while IFS= read -r path; do
+        if validated_path "$path" > /dev/null 2>&1 && is_orphaned "$path"; then
+            echo "Found expired or orphaned Rashomon worktree: $path" >&2
+            WORKTREES_TO_REMOVE+=("$path")
         fi
-    done
+    done < <(registered_worktrees)
 else
-    # All rashomon worktrees
-    for dir in "$BASE_PATH"/worktree-rashomon-*; do
-        if [[ -d "$dir" ]]; then
-            WORKTREES_TO_REMOVE+=("$dir")
+    while IFS= read -r path; do
+        if validated_path "$path" > /dev/null 2>&1; then
+            WORKTREES_TO_REMOVE+=("$path")
         fi
-    done
+    done < <(registered_worktrees)
 fi
 
-# Remove collected worktrees
-ERRORS=0
-for wt in "${WORKTREES_TO_REMOVE[@]}"; do
-    if ! remove_worktree "$wt"; then
+for worktree in "${WORKTREES_TO_REMOVE[@]}"; do
+    if ! remove_worktree "$worktree"; then
         ERRORS=$((ERRORS + 1))
     fi
 done
 
-# Prune worktree list
-echo "Pruning worktree list..." >&2
-git -C "$REPO_ROOT" worktree prune 2>&1 || true
+git -C "$REPO_ROOT" worktree prune > /dev/null 2>&1 || true
 
-# Report result
 if [[ ${#WORKTREES_TO_REMOVE[@]} -eq 0 ]]; then
     echo "No worktrees to clean up." >&2
 else
-    echo "Cleanup complete. Removed ${#WORKTREES_TO_REMOVE[@]} worktree(s)." >&2
+    echo "Cleanup complete. Selected ${#WORKTREES_TO_REMOVE[@]} worktree(s)." >&2
 fi
 
 if [[ $ERRORS -gt 0 ]]; then
-    echo "Warning: $ERRORS error(s) occurred during cleanup." >&2
+    echo "Warning: $ERRORS cleanup error(s) occurred." >&2
     exit 2
 fi
 
