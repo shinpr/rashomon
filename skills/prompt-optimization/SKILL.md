@@ -42,7 +42,7 @@ Evaluate every pattern and record `issue`, `already_satisfied`, or `not_applicab
 | Priority | ID | Pattern | Decision goal |
 |---|---|---|---|
 | P1 | BP-001 | Negative Instructions | Lead with the required behavior; retain explicit prohibitions for narrow irreversible boundaries |
-| P1 | BP-002 | Vague Instructions | Replace delegated guesses with observable criteria or decision rules |
+| P1 | BP-002 | Vague Instructions | Resolve an outcome-relevant ambiguity with the least-restrictive sufficient criterion |
 | P1 | BP-003 | Missing Output Format | Define the shape needed by the output consumer |
 | P2 | BP-004 | Unstructured Prompt | Make priority and relationships visible when structure reduces ambiguity |
 | P2 | BP-005 | Missing or Excess Context | Supply decision-sufficient context without distractors or duplication |
@@ -59,7 +59,7 @@ Maintain one complete phase-state object in the current invocation. Complete eac
 1. Load the analysis references required for the target type.
 2. Preserve the original prompt verbatim.
 3. Record the prompt's intended outcome and requirements that later phases must preserve.
-4. Evaluate BP-001 through BP-008. Record every distinct issue in `findings` with a unique `finding_id`, pattern, severity, location, and quoted evidence.
+4. Evaluate BP-001 through BP-008. Record every distinct issue in `findings` with a unique `finding_id`, pattern, severity, location, and quoted evidence. A BP-002 finding represents one decision required by the intended outcome whose plausible interpretations would materially change correctness, requested scope, downstream usability, or verification.
 5. Record missing inputs under `unresolved_inputs`.
 
 `analysis_gate` passes when:
@@ -74,7 +74,7 @@ Maintain one complete phase-state object in the current invocation. Complete eac
 
 Start this step when `analysis_gate.status` is `pass`.
 
-1. Resolve every finding as `applied` or `skipped` with a reason.
+1. Resolve every finding as `applied` or `skipped` with a reason. For BP-002, choose the least-restrictive clarification that supplies the required precision and base the reason on its precision contribution and constraint cost.
 2. Apply Structural and Context Addition changes that improve task execution.
 3. Consolidate redundant changes and preserve requirements recorded in Step 1.
 4. Produce the candidate optimized prompt.
@@ -83,8 +83,9 @@ Start this step when `analysis_gate.status` is `pass`.
 
 - every finding has exactly one resolution;
 - every change traces to a finding or named project source;
-- all preservation requirements remain represented; and
-- added constraints remove a real ambiguity or protect a real requirement.
+- all preservation requirements remain represented;
+- added constraints remove a real ambiguity or protect a real requirement; and
+- every applied BP-002 clarification identifies an observable precision contribution and preserves the valid solutions allowed by the original intent.
 
 ### Step 3: Balance
 
@@ -120,7 +121,6 @@ In Machine mode, return exactly one valid JSON object in this key order. Populat
 
 ```json
 {
-  "protocol_version": "1.2",
   "analysis": {
     "original_prompt": "verbatim input",
     "target_type": "general_prompt | skill_content",
@@ -165,7 +165,6 @@ Example of an analysis-blocked transition:
 
 ```json
 {
-  "protocol_version": "1.2",
   "analysis": {"original_prompt": "verbatim input", "target_type": "skill_content", "intended_outcome": "observable outcome", "reference_coverage": [], "pattern_coverage": {}, "findings": [], "preservation_requirements": [], "unresolved_inputs": ["required skill reference unavailable"]},
   "analysis_gate": {"status": "blocked", "missing": ["references/skills.md"]},
   "optimization": null,
@@ -196,7 +195,15 @@ Use ordered steps when the task has sequential dependencies or when an early res
 
 ### BP-007: Examples
 
-Default to instructions or schemas for generally known behavior. Add an example when it conveys a domain-, product-, or organization-specific mapping, a non-obvious exception, or a boundary that a schema cannot express. Connect every example to the ambiguity it removes and keep the smallest set that covers those ambiguities.
+Default to concise rules or consumer-required output shapes for generally known behavior. Add an example when it conveys a domain-, product-, or organization-specific mapping, a non-obvious exception, or a boundary that a rule cannot express. Connect every example to the ambiguity it removes and keep the smallest set that covers those ambiguities.
+
+### Code and Repository Tasks
+
+When the target requires a code or repository change:
+
+- Treat source, tests, configuration, interfaces, and callers as project artifacts that can supply required decisions.
+- Derive compatibility and verification criteria from the repository's existing contracts and workflows.
+- Require evidence from the relevant established checks before claiming completion.
 
 ## Improvement Classification
 

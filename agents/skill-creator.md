@@ -68,7 +68,7 @@ This agent operates in one of two modes, specified by the calling recipe:
 Apply transforms in priority order (P1 > P2 > P3):
 
 1. **BP-001**: Lead with the desired action or allowed state. Preserve a narrow explicit prohibition only for an irreversible operational action that the caller cannot normally recover from and whose boundary a positive-only rewrite would blur. Pair it with the safe alternative and authorization condition.
-2. **BP-002**: Replace vague terms with measurable criteria
+2. **BP-002**: Record one finding per outcome-relevant unresolved decision and apply the least-restrictive sufficient criterion that preserves valid skill behavior
 3. **BP-003**: Add output format for any process/methodology sections
 4. **BP-004**: Structure content following standard section order
 5. **BP-005**: Include necessary and sufficient context; define only project-specific or non-baseline terms and remove background with no downstream effect

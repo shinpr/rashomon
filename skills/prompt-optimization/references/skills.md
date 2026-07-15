@@ -13,19 +13,19 @@ Skill content serves two distinct roles. Apply BP patterns accordingly:
 | Role | Description | BP application |
 |------|-------------|----------------|
 | **LLM instruction** | Directs the LLM's own judgment and behavior | Apply BP patterns directly |
-| **Output pattern guidance** | Examples/templates that shape what the LLM produces for a downstream consumer (image generation model, API, end user) | Apply BP to the instruction framing, not to individual values within examples. Increasing specificity for the downstream consumer (e.g., visual parameters instead of abstract mood words for image models) is a valid improvement even when the LLM itself understands the abstract term |
+| **Output pattern guidance** | Examples or templates that shape what the LLM produces for a downstream consumer | Apply BP to the instruction framing rather than individual example values. Consumer-required parameters remain valid when they control downstream interpretation or acceptance. |
 
 ### Pattern interpretations
 
 | Pattern | Skill-Specific Interpretation |
 |---------|-------------------------------|
-| BP-001 Negative Instructions | Lead with the desired action or allowed state. Preserve a narrow explicit prohibition only when violation is an irreversible operational action, the caller cannot normally recover it, and a positive-only rewrite would blur the boundary. Pair it with the safe alternative and authorization condition. Example: "Keep repository history unchanged. Do not commit or push until the user explicitly requests it." Rewrite quality policies and scoring rules as positive criteria because their outputs remain reviewable. |
-| BP-002 Vague Instructions | Replace "appropriate", "good", "proper" with measurable if-then criteria or concrete thresholds. Every vague instruction forces the LLM to guess. **Skill exception**: Expressions that the LLM can resolve unambiguously from input context (e.g., "where the user left gaps" when the user's prompt is available for comparison) are not vague — they describe a deterministic operation, not a subjective judgment. |
-| BP-003 Missing Output Format | Every process/methodology section must define its output structure (JSON schema, markdown template, or example). |
+| BP-001 Negative Instructions | Lead with the desired action or allowed state. Preserve a narrow explicit prohibition only when violation is an irreversible operational action, the caller cannot normally recover it, and a positive-only rewrite would blur the boundary. Pair it with the safe alternative and authorization condition. Rewrite quality policies and scoring rules as positive criteria because their outputs remain reviewable. |
+| BP-002 Vague Instructions | Record a finding only when a vague term leaves one decision required by the intended outcome and plausible interpretations would materially change execution or verification. Choose the least-restrictive sufficient criterion: the measurable criterion or if-then rule that supplies the required precision while excluding the fewest valid behaviors. Record outcome-relevant precision contribution and constraint cost in the resolution reason. Expressions resolved unambiguously from input context are already satisfied. |
+| BP-003 Missing Output Format | Every process or methodology section defines the output contract required by its consumer. |
 | BP-004 Unstructured Content | Apply standard section order (see below). Skip restructuring if skill is under 30 lines and covers a single topic. |
 | BP-005 Missing or Excess Context | Include the context needed for a decision, action, or verification result. Define project-specific terms and name source paths. Baseline technical knowledge needs no explanation. Condense duplicated background and content with no downstream effect. |
 | BP-006 Complex Content | Break sequential or high-risk work into numbered states. Each state produces observable completion evidence and names the transition condition for the next state. Skip for simple reference tables or single-action rules. |
-| BP-007 Unnecessary or Biased Examples | Default to instructions or schemas for generally known behavior. Add the smallest example set that communicates organization-, product-, or domain-specific mappings, non-obvious exceptions, or boundaries that a schema cannot express. Map every example to the ambiguity it removes. |
+| BP-007 Unnecessary or Biased Examples | Default to concise rules or consumer-required output shapes for generally known behavior. Add the smallest example set that communicates organization-, product-, or domain-specific mappings, non-obvious exceptions, or boundaries that a rule cannot express. Map every example to the ambiguity it removes. |
 | BP-008 Missing Uncertainty Handling | Classify evidence as observed, inferred, or unknown. Add escalation criteria and explicit stopping conditions when an unknown blocks the next transition. |
 
 ## 9 Editing Principles
@@ -35,10 +35,10 @@ Measurable quality criteria for skill content. Each principle includes a pass/fa
 | # | Principle | Pass Criteria | Fail Example |
 |---|-----------|---------------|--------------|
 | 1 | Context efficiency | Every sentence contributes to LLM decision-making. No filler. | "This is an important skill that helps with..." |
-| 2 | Deduplication | No concept explained twice at the same abstraction level within the skill or across skills. Mentions at different structural roles (e.g., classification framework vs execution detail) are not duplicates | Same error handling rules in both coding-standards and typescript-rules |
-| 3 | Grouping | Related criteria in single section (minimize read operations) | Scattered error handling rules across 4 sections |
-| 4 | Measurability | Criteria name observable evidence, deterministic decision rules, or justified thresholds | "Write clean code" without an observable condition |
-| 5 | Positive form | Instructions state what to do (BP-001 applied) | "Don't use any" instead of "Use only X" |
+| 2 | Deduplication | No concept explained twice at the same abstraction level within the skill or across skills. Mentions at different structural roles, such as classification and execution, are distinct | The same rule appears in multiple sections without a distinct role |
+| 3 | Grouping | Related criteria appear in one section to minimize read operations | One policy is scattered across unrelated sections |
+| 4 | Measurability | Criteria name observable evidence, deterministic decision rules, or justified thresholds | A quality label appears without an observable condition |
+| 5 | Positive form | Instructions state the desired action or allowed state | An instruction names only a forbidden state |
 | 6 | Consistent notation | Uniform heading levels, list styles, table formats | Mix of `-`, `*`, `1.` in same context |
 | 7 | Explicit prerequisites | Project-specific and non-baseline prerequisites are stated or linked; baseline technical knowledge is left concise | Uses an internal acronym without defining or linking it |
 | 8 | Priority ordering | Most important items first, exceptions last | Edge cases before common patterns |
@@ -57,20 +57,20 @@ Loaded at startup for ALL skills. Shared 15,000-character budget across all load
 **Requirements**:
 - Third-person, verb-first: "Evaluates X against Y" (NOT "This skill evaluates...")
 - Focus on user intent, not implementation: describe what the user is trying to achieve, not the skill's internal mechanics
-- Include "Use when:" trigger with concrete scenarios using the actual phrases users say (e.g., "deploy to staging", "add error handling", "review this PR")
+- Include a "Use when:" trigger using the actual phrases callers use
 - Explicitly list contexts where the skill applies, including cases where the user does not name the domain directly
 - Target ~200 characters (hard limit: 1024)
 - Template: `{Verb}s {what} using {project-specific criteria/patterns}. Use when {user phrases that trigger this skill}.`
 
 **Description quality checklist**:
-- [ ] Contains project-specific terms, class names, or patterns that differentiate from general LLM knowledge
+- [ ] Contains project-specific terms, entities, or decision rules that differentiate from general LLM knowledge
 - [ ] Uses phrases the team actually says when requesting this kind of work
-- [ ] Focuses on user intent ("when adding...", "when reviewing..."), not skill internals ("classifies errors into...")
+- [ ] Focuses on user intent and caller situations rather than skill internals
 - [ ] A skill covering only general knowledge that the LLM already knows indicates the skill needs project-specific content, or is unnecessary
 
 **Name field**:
 - Max 64 characters, lowercase letters/numbers/hyphens only
-- Gerund form preferred: `processing-pdfs`, `analyzing-spreadsheets`
+- Gerund form preferred
 
 ### Tier 2: SKILL.md Body
 
