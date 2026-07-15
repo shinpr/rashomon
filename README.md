@@ -85,37 +85,18 @@ in up to three blind, paired trials. The report highlights differences that recu
 
 #### What You Get
 
-**1. Detected Issues**
+**1. Analysis**
 ```
-- BP-002 (Vague Instructions): Sort order, language, and error handling not specified
-- BP-003 (Missing Output Format): No expected output structure defined
-```
-
-**2. Improved Prompt**
-```
-Write a TypeScript function that sorts a number array in ascending order.
-- Return empty array for empty input
-- Include JSDoc comments
-- Output: function code with example usage
+- BP-002 (already satisfied): No consumer requirement selects a language,
+  ordering, or error policy, so those choices remain flexible.
 ```
 
-**3. Comparison Report**
-
-| Aspect | Original | Improved |
-|--------|----------|----------|
-| Type definitions | None | Included |
-| Edge case handling | None | Included |
-| Documentation | None | JSDoc added |
-
-**Result: Structural Improvement** - The optimization made a meaningful difference.
-
-#### Example: When rashomon finds no real improvement
-
+**2. Final Prompt**
 ```
-/recipe-eval-prompt Summarize this article in 3 bullet points
+Write a function to sort an array
 ```
 
-**Result: Variance** - Prompt was already well-scoped; differences were stylistic only.
+**Result: Original sufficient** - Rashomon stops before paired execution because no outcome-relevant ambiguity was found.
 
 </details>
 
@@ -225,7 +206,7 @@ Both skill review and prompt analysis check against 8 common patterns:
 | ID | Pattern | Problem | Fix |
 |----|---------|---------|-----|
 | BP-001 | Negative Instructions | A prohibition can prime the forbidden behavior without naming the target state | Lead with the desired behavior; retain narrow prohibitions for irreversible actions |
-| BP-002 | Vague Instructions | Missing specifics cause high output variance | Add explicit constraints: format, length, scope, tone |
+| BP-002 | Vague Instructions | An outcome-relevant decision has materially different plausible interpretations | Apply the least-restrictive sufficient criterion that preserves valid solutions |
 | BP-003 | Missing Output Format | No format spec leads to inconsistent outputs | Define expected structure: JSON schema, section headers, etc. |
 
 ### P2: High Impact (Should Fix)

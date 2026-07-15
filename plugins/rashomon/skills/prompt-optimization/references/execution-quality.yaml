@@ -18,11 +18,11 @@ evaluation_criteria:
 
     context_addition:
       description: |
-        Project-specific information added from codebase investigation, not from prompt rewriting. Indicates information advantage rather than prompt writing technique.
+        Project-specific information added from inspected project artifacts rather than prompt rewriting. Indicates information advantage rather than prompt writing technique.
       indicators:
-        - Codebase-derived context injected into prompt
+        - Artifact-derived context injected into the prompt
         - Domain-specific terms or constraints added from project knowledge
-        - File paths, API signatures, or architecture details included
+        - Named project facts and their source locations included
       weight: high
       note: "Distinguish from structural: context addition is about what information was added, structural is about how the prompt was written."
 
@@ -60,7 +60,7 @@ evaluation_criteria:
     decision_sufficiency:
       description: Verify each required decision, action, and check has enough input to execute
       pass_evidence:
-        - Every delegated choice has an explicit selection or deterministic decision rule
+        - Every delegated choice required for the intended outcome has an explicit selection or deterministic decision rule
         - Every ordered step names the evidence that permits the next transition
       blocked_when:
         - The model must guess a project, product, security, or compatibility decision
@@ -80,9 +80,11 @@ evaluation_criteria:
       description: Verify each constraint resolves ambiguity or protects a real requirement
       pass_evidence:
         - Each constraint traces to a finding, preservation requirement, or project source
+        - Each applied BP-002 clarification records its observable precision contribution and the valid solutions it excludes
         - Simple tasks retain lightweight instructions
       blocked_when:
         - A constraint limits a valid solution without protecting a named requirement
+        - A BP-002 clarification has no outcome-relevant precision contribution or its constraint cost narrows the original intent
         - Structure or formatting exists only for visual regularity
 
     traceability:
@@ -103,7 +105,7 @@ evaluation_criteria:
       evaluation:
         - Compare actual outputs, not just prompt structure
         - Focus on task completion quality
-        - Consider edge case handling
+        - Consider boundary and exception handling
       scoring:
         much_better: "Clear structural improvement in output"
         somewhat_better: "Minor improvements visible"
