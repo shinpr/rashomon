@@ -28,3 +28,7 @@ jobs:
 
       - name: Run tests
         run: pytest tests/ -v
+
+      - name: Verify canonical plugin sync
+        if: matrix.python-version == '3.9'
+        run: python scripts/sync_plugin.py --check

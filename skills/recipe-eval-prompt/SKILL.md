@@ -1,6 +1,6 @@
 ---
 name: recipe-eval-prompt
-description: Compares original and optimized prompts by parallel execution in git worktrees. Use when evaluating prompt improvement effects or learning prompt engineering through concrete examples.
+description: Compares original and optimized prompts through repeated blind paired execution in git worktrees. Use when evaluating prompt improvement effects or learning prompt engineering through concrete examples.
 disable-model-invocation: true
 ---
 
@@ -47,50 +47,75 @@ Input:
 - User's exact request text
 
 Output:
-- Analysis results (detected patterns)
-- Optimized prompt
-- Applied optimizations list
+- Complete gated JSON from the prompt-optimization skill
+- Analysis results in `analysis.pattern_coverage`
+- Individual issues in `analysis.findings`
+- Final prompt in `result.final_prompt`
+- Applied optimizations in `optimization.finding_resolutions`
 
 **Quality Gate**:
 - [ ] Input contains user's request text only
-- [ ] Output presented to user matches agent's output
+- [ ] Agent output parses as JSON
+- [ ] `analysis_gate`, `optimization_gate`, and `balance_gate` are `pass`
+- [ ] `result.status` is `optimized` or `original_sufficient`
 
-### Step 3. Execution Environment Setup
+When a gate is `blocked`, stop before environment setup and present the gate's `missing` items as the required input for continuing.
 
-Execute environment setup per worktree-execution skill "Creation" section.
+When `result.status` is `original_sufficient`, stop before environment setup. Return the analysis evidence and original prompt as the final prompt. Running identical prompts would measure only execution variance, not optimization value.
 
-### Step 4. Parallel Execution
+### Step 3. Repeated Paired Execution
 
-**Invoke**: Two prompt-executor agents simultaneously (single message, parallel Task calls)
+Resolve one base SHA, then target three valid trials with at most five total trial attempts. For every trial, create a fresh original/optimized worktree pair at that SHA using worktree-execution.
+Within a trial, invoke two prompt-executor agents simultaneously:
 
 ```yaml
 Subagent 1:
   agent: prompt-executor
   working_directory: {worktree_original_path}
+  expected_base_sha: {pinned_base_sha}
   prompt: {original_request}
 
 Subagent 2:
   agent: prompt-executor
   working_directory: {worktree_optimized_path}
-  prompt: {optimized_request}
+  expected_base_sha: {pinned_base_sha}
+  prompt: {prompt_analysis.result.final_prompt}
 ```
 
-Each subagent executes the prompt as a development task within its isolated worktree.
+Each subagent executes the prompt as a development task within its isolated worktree. Clean the pair after collecting both results, then create fresh worktrees for the next trial.
 
 **CRITICAL**: Both Task tool calls MUST be in the same message to achieve true parallel execution.
 
-### Step 5. Environment Cleanup
+**Pair validity gate**:
+
+- both execution statuses are `success`;
+- both results used fresh worktrees from the same repository state; and
+- both results report the pinned base SHA; and
+- neither result contains an environment-verification failure.
+
+Keep failed and partial runs as diagnostics only. Continue until three valid pairs are collected or five total trial attempts have run. Compare with reduced confidence when two valid pairs remain. With fewer than two, set status to `inconclusive`, skip winner/recommendation claims, and report the diagnostics.
+
+### Step 4. Environment Cleanup
 
 Execute worktree cleanup per worktree-execution skill "Cleanup" section.
 
-### Step 6. Report Generation
+### Step 5. Blind Report Generation
 
-**Invoke**: report-generator agent
+Invoke report-generator in two phases.
 
-Input:
-- Original and optimized prompts
-- Execution results from both subagents
-- Applied optimizations list
+**Phase 1 — blind assessment**:
+
+- User task description
+- Anonymized valid pairs as Result A and Result B
+- No prompts, identity mapping, optimization findings, or change summary
+
+The agent must complete and lock its output-quality judgment before Phase 2.
+
+**Phase 2 — identity reveal**:
+
+- Identity mapping: A = original, B = optimized
+- Full prompt-analysis JSON, not only `optimization.finding_resolutions`
+- Execution metadata and diagnostics for every trial
 
 Output:
 - Comparison report (markdown)
@@ -99,7 +124,9 @@ Output:
 **Quality Gate**:
 - [ ] Output presented to user matches agent's output
 
-### Step 7. Retrospective
+The report joins `analysis.findings` and `optimization.finding_resolutions` by `finding_id`; pattern, severity, evidence, change, and source must remain traceable. Context delta is derived from resolutions whose source is a named project path or project knowledge entry.
+
+### Step 6. Retrospective
 
 **Trigger**: Report generation completes
 
@@ -134,14 +161,15 @@ The report includes (defined in report-generator):
 
 | Scenario | Behavior |
 |----------|----------|
-| One subagent fails | Continue with successful result, report as "partial" |
-| Both subagents fail | Report full failure with diagnostics |
+| One side of a trial fails | Exclude the unpaired trial from quality comparison and retain diagnostics |
+| Fewer than two valid pairs | Report `inconclusive`; no winner or prompt recommendation |
+| All executions fail | Report full failure with diagnostics |
 | Timeout | Terminate, capture partial results, cleanup |
 | Worktree creation fails | Report git error, suggest checking repository state |
 
 ## Prerequisites
 
-- Git repository (git 2.5+ for worktree support)
+- Git repository with `git worktree lock` support
 - Claude Code subagent execution permissions
 - Sufficient disk space for worktree copies
 

@@ -39,6 +39,9 @@ Orchestrator
 # Custom labels for skill eval
 ./scripts/worktree-create.sh [repo_root] baseline with-skill
 ./scripts/worktree-create.sh [repo_root] old-version new-version
+
+# Pin every pair in an evaluation run to the same commit
+./scripts/worktree-create.sh [repo_root] trial-a trial-b [base_sha]
 ```
 
 **Output** (stdout):
@@ -50,7 +53,9 @@ Orchestrator
 **Properties**:
 - Location: `${TMPDIR:-/tmp}/`
 - Naming: `worktree-rashomon-{label}-{timestamp}`
-- Branch: Detached HEAD at current commit
+- Branch: Detached HEAD at the pinned base commit
+- Base commit: Caller-supplied SHA, resolved once per evaluation
+- Active marker: Git worktree lock containing run ID, owner PID, start time, and lease expiry
 - Labels default to `original` / `optimized` if not specified
 
 ### Cleanup
@@ -64,7 +69,7 @@ Orchestrator
 # Remove specific worktrees
 ./scripts/worktree-cleanup.sh [repo_root] path1 path2
 
-# Remove only orphaned worktrees (age > 1 hour)
+# Remove registered orphaned worktrees, including expired Rashomon locks
 ./scripts/worktree-cleanup.sh --orphans [repo_root]
 ```
 
@@ -86,7 +91,9 @@ The calling command determines which agents to invoke and how to structure the T
 |----------|----------|
 | Creation fails | Report git error, suggest checking repository state |
 | Cleanup fails | Log warning, attempt orphan cleanup on next run |
-| Orphan detected | Force remove worktrees older than 1 hour |
+| Unlocked orphan | Remove registered Rashomon worktree after 1 hour |
+| Crashed locked run | Remove after owner disappearance plus orphan age, or after lease expiry |
+| Active long run | Set `RASHOMON_LEASE_SECONDS` before creation so the lease covers the run |
 
 ## Scripts Reference
 
@@ -109,5 +116,5 @@ The calling command determines which agents to invoke and how to structure the T
 ## Constraints
 
 - **No concurrent comparisons**: One rashomon execution per repository
-- **Git required**: git 2.5+ for worktree support
+- **Git required**: A version supporting `git worktree lock`
 - **Disk space**: Sufficient space for worktree copies

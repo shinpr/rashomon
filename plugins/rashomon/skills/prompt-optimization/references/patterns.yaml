@@ -1,6 +1,5 @@
 # Prompt Optimization Patterns
-# Based on 2025-2026 prompt engineering research
-# Model-agnostic patterns only
+# Runtime decision rules for prompt analysis
 
 patterns:
   # P1: Critical (Must Fix)
@@ -21,15 +20,10 @@ patterns:
       - "Never use bullet points"
 
     why_problematic: |
-      Known as the "Pink Elephant Problem" - telling someone "don't think of a
-      pink elephant" makes them think of it. LLM attention mechanisms similarly
-      focus on negated content, increasing the probability of producing what
-      was forbidden.
-
-      Research: Inverse scaling on negated prompts — larger models perform worse (Jang et al., 2022, arXiv:2209.12711). NeQA benchmark confirms negation comprehension does not improve with scale.
+      Naming a forbidden behavior can prime the same behavior while leaving the desired action unspecified. A prohibition alone also gives the model no executable target state to follow.
 
     improvement: |
-      Reframe negative instructions as positive ones with equivalent meaning.
+      State the desired action or allowed state first. Preserve a narrow explicit prohibition when violation is an irreversible operational action, the caller cannot normally recover it, and a positive-only rewrite would blur the boundary. Pair it with the safe alternative and authorization condition.
 
       Examples:
       - "Don't include opinions" -> "Include only factual, verifiable information"
@@ -45,6 +39,7 @@ patterns:
         - "Write simple, readable code with clear variable names"
         - "Use only current, supported APIs from the latest documentation"
         - "Include comprehensive error handling for all failure cases"
+        - "Keep repository history unchanged. Do not commit or push until the user explicitly requests it."
 
   - id: BP-002
     name: Vague Instructions
@@ -59,11 +54,7 @@ patterns:
       - Success criteria (how to know if done correctly)
 
     why_problematic: |
-      Vague instructions are the #1 cause of prompt failure. They create high
-      variance in outputs as the LLM must guess unstated requirements.
-
-      Research: Accounts for approximately 40% of performance variance between
-      prompt versions.
+      Vague instructions delegate a required decision to the model without supplying observable criteria or a deterministic decision rule.
 
     improvement: |
       Add explicit constraints for all ambiguous aspects:
@@ -94,9 +85,7 @@ patterns:
       - Example of desired output
 
     why_problematic: |
-      Without format specification, outputs are inconsistent and harder to parse.
-      Structured output requirements also reduce hallucination by constraining
-      the output space.
+      Without the output shape needed by the consumer, results can be difficult to parse, route, compare, or verify.
 
     improvement: |
       Explicitly define output format:
@@ -145,9 +134,7 @@ patterns:
       - Multiple topics mixed without organization
 
     why_problematic: |
-      Research confirms "Structure > Length" - a well-structured short prompt
-      outperforms a long unstructured one. Structure helps the LLM identify
-      priorities and relationships between instructions.
+      Hidden priority and relationships make it easier to merge separate requirements or execute dependent actions out of order.
 
     improvement: |
       Apply the 4-block pattern:
@@ -196,27 +183,21 @@ patterns:
           - 3 test cases demonstrating edge cases
 
   - id: BP-005
-    name: Missing Context
+    name: Missing or Excess Context
     severity: P2
 
     what_to_look_for: |
-      Check if the prompt provides:
-      - Purpose/goal of the task
-      - Target audience
-      - Usage context
-      - Relevant background information
-      - Definition of domain-specific terms
+      Check whether each decision, action, and verification has the context it needs. Also check for duplicated, distracting, or unactionable context that has no downstream effect.
 
     why_problematic: |
-      Research confirms "more context = higher accuracy". Without context, LLMs
-      make assumptions that may not match the user's actual needs.
+      Missing context forces assumptions. Excess context competes with operative instructions and makes required evidence harder to retrieve.
 
     improvement: |
-      Add context section explaining:
-      - Why this task is needed
-      - Who will use the output
-      - What constraints exist in the environment
-      - Any relevant prior decisions or existing code
+      Build necessary and sufficient context:
+      - Add an item when removing it would change a decision, action, or verification
+      - Name the source for project-specific facts
+      - Condense repeated facts into one operative statement
+      - Keep raw background behind a path or reference when only an extracted fact is needed
 
     examples:
       bad:
@@ -224,14 +205,13 @@ patterns:
       good:
         - |
           ## Context
-          Building a REST API for a mobile banking app. Security is critical.
-          We use JWT tokens and have existing middleware for rate limiting.
+          This login endpoint belongs to the mobile banking API. Reuse the existing JWT issuer and rate-limiting middleware at the named project paths.
 
           ## Task
           Write a login function that validates credentials and returns a token.
 
   - id: BP-006
-    name: Complex Task Without Decomposition
+    name: Missing Procedural Gates
     severity: P2
 
     what_to_look_for: |
@@ -242,24 +222,22 @@ patterns:
       - Multiple verbs for different actions (analyze AND implement AND test)
 
     why_problematic: |
-      ICLR 2023 research shows 28% error reduction when complex tasks are
-      decomposed. Single complex instructions have higher failure rates.
+      Without intermediate evidence and transition conditions, a model can jump to a later result while silently skipping prerequisite analysis.
 
     improvement: |
-      Break into evaluable steps with quality checkpoints:
+      Break into evaluable steps with completion evidence and transition rules:
 
       Instead of: "Analyze, implement, and test the feature"
 
       Use:
       "Step 1: Analyze requirements and list acceptance criteria
-       [checkpoint: verify criteria are complete]
+       [gate: proceed only when every requirement maps to an acceptance criterion]
        Step 2: Implement the feature
-       [checkpoint: verify implementation matches criteria]
+       [gate: proceed only when implementation evidence covers every criterion]
        Step 3: Write tests for each criterion"
 
     key_insight: |
-      The goal is NOT decomposition itself, but creating EVALUABLE GRANULARITY
-      with QUALITY CHECKPOINTS at each step.
+      The goal is externally visible state progression: each step produces evidence that controls whether the next step is valid.
 
     examples:
       bad:
@@ -269,40 +247,35 @@ patterns:
           Build user authentication in these steps:
 
           1. Design the data model
-             Checkpoint: Verify all required fields are present
+             Evidence: Map every required field to a schema property.
+             Transition: Continue only when the mapping has no gaps.
 
           2. Implement registration endpoint
-             Checkpoint: Test with valid and invalid inputs
+             Evidence: Tests pass for valid and invalid inputs.
+             Transition: Continue only when each acceptance criterion has a passing test.
 
           3. Implement login endpoint
-             Checkpoint: Verify token generation works
+             Evidence: A valid login produces a verified token.
+             Transition: Continue only when token generation and verification both pass.
 
           4. Implement password reset flow
-             Checkpoint: Test email sending and token validation
+             Evidence: Email delivery and reset-token validation tests pass.
+             Failure rule: Stop and report the failing prerequisite instead of claiming completion.
 
   # P3: Enhancement (Could Fix)
 
   - id: BP-007
-    name: Biased Examples
+    name: Unnecessary or Biased Examples
     severity: P3
 
     what_to_look_for: |
-      In few-shot prompts, check if examples:
-      - All have the same structure
-      - All represent the same type of case
-      - Lack edge cases or exceptions
-      - Are too similar to each other
+      First determine whether examples communicate information unavailable from a concise instruction or schema. When examples are necessary, check for irrelevant surface patterns, unbalanced cases, missing exceptions, and repeated examples that remove the same ambiguity.
 
     why_problematic: |
-      Research shows 40% of few-shot effectiveness depends on exemplar selection.
-      Homogeneous examples cause the model to overfit to that specific pattern.
+      Examples condition output distribution, format, and local patterns. Generic or redundant examples consume context and can anchor the response to details unrelated to the target task.
 
     improvement: |
-      Diversify examples to include:
-      - Different structures/formats
-      - Edge cases
-      - Exceptions to the rule
-      - Varying complexity levels
+      Default to an instruction or schema for generally known behavior. Add an example only for a domain-, product-, or organization-specific mapping, a non-obvious exception, or a boundary that a schema cannot express. Map each example to the ambiguity it removes and retain the smallest covering set.
 
     examples:
       bad:
@@ -313,14 +286,15 @@ patterns:
           - "Add email notifications"
       good:
         - |
-          Examples of good commit messages:
-          - "Add user authentication" (new feature)
-          - "Fix null pointer in login flow" (bug fix)
-          - "Refactor database queries for performance" (refactoring)
-          - "Update README with setup instructions" (documentation)
+          Organization-specific mapping not available from general knowledge:
+          - Input: backward-compatible public API fix
+            Output prefix: "fix"
+          - Input: breaking public API change
+            Output prefix: "breaking"
+          These examples define the organization's non-standard release mapping.
 
   - id: BP-008
-    name: No Uncertainty Permission
+    name: Missing Uncertainty Handling
     severity: P3
 
     what_to_look_for: |
@@ -330,20 +304,15 @@ patterns:
       - Implicitly requires certainty
 
     why_problematic: |
-      Without permission to express uncertainty, LLMs may hallucinate answers
-      rather than admit limitations.
+      Without an evidence threshold and next action, the model must choose between guessing, stopping without useful information, or proceeding on an unstated assumption.
 
     improvement: |
-      Add explicit uncertainty permission:
+      Define uncertainty handling as an operational rule:
 
-      "If you are unsure or the information is ambiguous, please indicate your
-      level of confidence or say 'I'm not certain about this.'"
-
-      Or: "If you cannot determine the answer with confidence, explain what
-      additional information would be needed."
+      "Classify claims as observed, inferred, or unknown. For unknown inputs that block the next step, stop at the current gate and name the exact evidence or user decision required to continue."
 
     examples:
       bad:
         - "What is the exact cause of this bug?"
       good:
-        - "What is the likely cause of this bug? If multiple causes are possible, list them with your confidence level for each. If you need more information to determine the cause, specify what would help."
+        - "List candidate causes as observed, inferred, or unknown. Proceed to a fix only when one cause is supported by a reproducer or trace; otherwise return the evidence needed for the next diagnostic step."

@@ -38,23 +38,23 @@ Present these questions as plain text and wait for the user's response:
 | Provides project-specific details | Incorporate into skill content. Proceed to Round 3. |
 | Describes only general knowledge | Inform user that a general-knowledge-only skill is unlikely to trigger at runtime. Offer: (A) identify project-specific aspects to add, (B) proceed with the understanding that the skill may require iteration to trigger. |
 
-### Round 3: Scope, Triggers, and User Phrases
+### Round 3: Scope, Triggers, and Held-Out Test Tasks
 
 Present these questions as plain text and wait for the user's response:
 - When should this skill be activated? List 3-5 concrete scenarios
 - What does this skill explicitly cover vs. what it leaves out?
-- What phrases does your team actually use when requesting this kind of work? (e.g., "add error handling to X", "review the catch blocks", "fix the retry logic")
+- What complete requests does your team actually send when asking for this work? Provide at least two skill-dependent requests verbatim. They remain outside description authoring until selected for trigger/effectiveness testing.
 
-After collecting responses, classify each phrase into two categories:
+After collecting responses, classify each request into two categories:
 
 | Category | Definition | Example |
 |----------|-----------|---------|
-| **Skill-dependent** | Cannot be completed correctly without the skill's knowledge; pattern-copying existing code would produce an incorrect or incomplete result | "implement retry logic", "review error handling" |
-| **Pattern-copyable** | Can be completed by reading and copying existing code patterns | "add a fetchXxx function" |
+| **Skill-dependent** | Cannot be completed correctly without the skill's knowledge; pattern-copying existing code would produce an incorrect or incomplete result | "Review the retry behavior in `fetchOrder` against our service policy and fix any violations." |
+| **Pattern-copyable** | Can be completed by reading and copying existing code patterns | "Add a `fetchOrder` function matching `fetchUser`." |
 
-If all phrases are pattern-copyable, inform the user: "These tasks can be completed by copying existing code. Can you provide a scenario that requires the hidden rules this skill encodes?" Ensure at least 1 skill-dependent phrase exists before proceeding.
+If the requests are pattern-copyable, inform the user: "These tasks can be completed by copying existing code. Can you provide requests that require the hidden rules this skill encodes?" Ensure at least two complete skill-dependent requests exist before proceeding.
 
-**Phase B handoff**: Store both categories. Phase B uses these as reference material (not direct input) when generating trigger test queries.
+**Phase B handoff**: Store both categories verbatim. Keep at least two skill-dependent requests out of description examples and authoring prompts. Phase B uses one directly and reserves another if a failed query must later become authoring evidence.
 
 ### Round 4: Decision Criteria and Evidence
 
@@ -81,7 +81,7 @@ prompt: |
   Skill name: {name from Round 5}
   Raw knowledge: {content from Round 4}
   Trigger scenarios: {scenarios from Round 3}
-  User phrases: {team phrases from Round 3}
+  User phrases: {non-held-out team phrases from Round 3}
   Scope: {coverage and boundaries from Round 3}
   Decision criteria: {rules from Round 4}
   Practical artifacts: {files, failures, PRs from Round 4, if provided}
@@ -121,6 +121,7 @@ Present the final grade and any remaining notes to user.
 5. Upon approval, write to target location:
    - Default: `.claude/skills/{name}/SKILL.md`
    - If references exist: `.claude/skills/{name}/references/`
+6. Compute and record the fingerprint of the complete written skill directory for Phase B.
 
 **Phase A complete. Proceed to eval.md for Phase B.**
 
@@ -132,14 +133,16 @@ Phase A must pass the following to Phase B (eval.md). The orchestrator carries t
 |------|--------|---------|
 | Skill name | Round 5 | `--skill-name` parameter |
 | Source skill directory | Step 5 write location | Worktree copy source |
-| User phrases | Round 3 (both categories) | Reference material for trigger query generation |
-| Trigger scenarios | Round 3 | Reference material for trigger query generation |
+| Source directory fingerprint | Step 6 | Verify with-skill installation identity |
+| Held-out test requests | Round 3 (verbatim, skill-dependent) | Direct input for trigger and effectiveness checks |
+| Other user phrases | Round 3 | Description authoring context; excluded from test selection |
+| Trigger scenarios | Round 3 | Validate that the held-out request is in scope |
 
 ## Completion Criteria
 
 - [ ] No naming conflict with existing skills (or user confirmed override)
 - [ ] Project-specific value validated in Round 2
-- [ ] User phrases collected and classified in Round 3 (at least 1 skill-dependent)
+- [ ] Complete user requests collected and classified in Round 3 (at least two held-out skill-dependent requests)
 - [ ] Skill name confirmed by user
 - [ ] rashomon:skill-creator returned valid output
 - [ ] rashomon:skill-reviewer returned grade A (or B issues fixed)

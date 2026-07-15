@@ -8,8 +8,7 @@ evaluation_criteria:
   improvement_types:
     structural:
       description: |
-        Essential changes to accuracy, completeness, or structure of output.
-        These indicate genuine optimization benefit.
+        Essential changes to accuracy, completeness, or structure of output. These indicate genuine optimization benefit.
       indicators:
         - Output addresses requirements that were missed before
         - Fewer errors or inaccuracies
@@ -19,8 +18,7 @@ evaluation_criteria:
 
     context_addition:
       description: |
-        Project-specific information added from codebase investigation, not from prompt rewriting.
-        Indicates information advantage rather than prompt writing technique.
+        Project-specific information added from codebase investigation, not from prompt rewriting. Indicates information advantage rather than prompt writing technique.
       indicators:
         - Codebase-derived context injected into prompt
         - Domain-specific terms or constraints added from project knowledge
@@ -30,8 +28,7 @@ evaluation_criteria:
 
     expressive:
       description: |
-        Different phrasing, ordering, or presentation, but equivalent substance.
-        Neutral classification requiring context to evaluate.
+        Different phrasing, ordering, or presentation, but equivalent substance. Neutral classification requiring context to evaluate.
       indicators:
         - Same information presented differently
         - Different word choices with same meaning
@@ -40,43 +37,62 @@ evaluation_criteria:
 
     variance:
       description: |
-        Within the probabilistic variance range of LLM output ("jitter").
-        If only variance-level differences exist, the original prompt was sufficient.
+        Within the probabilistic variance range of LLM output ("jitter"). If only variance-level differences exist, the original prompt was sufficient.
       indicators:
         - Minor wording differences
         - Slightly different examples (but equivalent quality)
         - Different formatting choices (when not specified)
       weight: ignore
 
-  # Quality Checkpoints for Step 3
+  # Gated balance checks for Step 3
 
   balance_checks:
 
-    over_optimization:
-      description: Check if optimization added too many constraints
-      warning_signs:
-        - Prompt length increased by more than 50%
-        - Added constraints that limit valid solutions unnecessarily
-        - Made prompt overly prescriptive when flexibility was acceptable
-        - Added structure to a naturally simple task
-      action: Consider removing low-value additions
+    intent_preservation:
+      description: Verify every original requirement remains represented with the same meaning
+      pass_evidence:
+        - Each preservation requirement maps to text in the candidate prompt
+        - Any intentional semantic change is identified as unresolved rather than silently applied
+      blocked_when:
+        - A requirement has no mapping
+        - A rewrite narrows or expands user intent without source support
 
-    lost_aspects:
-      description: Check if optimization removed important elements
-      warning_signs:
-        - Original intent became unclear
-        - Important context was compressed away
-        - Nuance was lost in simplification
-        - Edge cases are no longer addressed
-      action: Restore critical elements while maintaining improvements
+    decision_sufficiency:
+      description: Verify each required decision, action, and check has enough input to execute
+      pass_evidence:
+        - Every delegated choice has an explicit selection or deterministic decision rule
+        - Every ordered step names the evidence that permits the next transition
+      blocked_when:
+        - The model must guess a project, product, security, or compatibility decision
+        - A later step can begin without evidence from its prerequisite
 
-    clarity_trade_off:
-      description: Verify improvements didn't reduce clarity
-      warning_signs:
-        - More structured but harder to read
-        - Technical improvements that obscure the main point
-        - Format requirements that distract from content
-      action: Simplify while preserving key improvements
+    information_density:
+      description: Verify context is necessary, condensed, and placed near the decision it controls
+      pass_evidence:
+        - Each context item names its downstream decision, action, or verification use
+        - Repeated facts are consolidated
+        - Raw background is replaced by an extracted fact and source path when sufficient
+      blocked_when:
+        - Removing a context item would not change any downstream behavior
+        - Required evidence is obscured by unrelated detail
+
+    constraint_necessity:
+      description: Verify each constraint resolves ambiguity or protects a real requirement
+      pass_evidence:
+        - Each constraint traces to a finding, preservation requirement, or project source
+        - Simple tasks retain lightweight instructions
+      blocked_when:
+        - A constraint limits a valid solution without protecting a named requirement
+        - Structure or formatting exists only for visual regularity
+
+    traceability:
+      description: Verify factual additions and changes have inspectable origins
+      pass_evidence:
+        - Each change maps to a finding or named project source
+        - Claims are distinguishable as observed, inferred, or unknown when evidence differs
+      blocked_when:
+        - Project-specific context has no source
+        - An inference is presented as an observed fact
 
   # Comparison Evaluation
 
@@ -100,7 +116,7 @@ evaluation_criteria:
         - Prompt complexity vs output improvement
         - Time/token cost of longer prompts
         - Maintenance burden of complex prompts
-      note: "A simple prompt that works is better than a complex prompt that works slightly better"
+      note: "Additional prompt content must produce an attributable execution benefit"
 
     applicability:
       question: "Is this improvement generalizable?"
@@ -152,7 +168,8 @@ evaluation_criteria:
       include:
         - Side-by-side of key differences
         - Classification of each difference type
-        - Explanation of causation (which optimization led to which improvement)
+        - Observed association between a change and repeatable output differences
+        - Causal hypotheses only when a change-to-output mapping repeats across paired trials
 
     learning_points:
       focus: "What can be learned from this comparison?"

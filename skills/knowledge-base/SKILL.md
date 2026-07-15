@@ -22,6 +22,11 @@ patterns:
     improvement: |
       How to improve when detected
     learned_from: "Date and context"
+    source: "comparison ID, report path, or user feedback"
+    source_fingerprint: "stable hash or revision identifying the evidence"
+    validity_scope: "project area, version range, or conditions where this applies"
+    last_verified: "ISO-8601 timestamp"
+    invalidated_when: "observable condition that requires revalidation"
     confidence: 0.0-1.0
     times_applied: 0
 
@@ -32,7 +37,13 @@ anti_patterns:
     why_bad: |
       Why problematic in this project
     learned_from: "Date and context"
+    source: "comparison ID, report path, or user feedback"
+    source_fingerprint: "stable hash or revision identifying the evidence"
+    validity_scope: "project area, version range, or conditions where this applies"
+    last_verified: "ISO-8601 timestamp"
+    invalidated_when: "observable condition that requires revalidation"
     confidence: 0.0-1.0
+    times_applied: 0
 
 metadata:
   last_updated: "ISO-8601 timestamp"
@@ -83,9 +94,9 @@ Save only entries that are:
 This formula:
 - Prioritizes high-confidence entries
 - Rewards frequently-used patterns
-- Treats all entries equally regardless of age
+- Applies no direct age penalty; validity is evaluated separately
 
-**Key Principle**: Old entries are valuable. Retention depends on confidence and usage frequency.
+Age alone does not reduce retention. Before scoring, revalidate an entry when its `invalidated_when` condition is observed or its source fingerprint no longer matches. An entry with unresolved validity is excluded from retrieval until verified.
 
 **Eviction Process**:
 1. Calculate retention scores for all entries
@@ -99,19 +110,23 @@ This formula:
 
 At start of prompt analysis:
 1. Read `.claude/.rashomon/prompt-knowledge.yaml` (if exists)
-2. For each entry, check `what_to_look_for` against current prompt
-3. Return relevant entries with relevance scores
-4. Increment `times_applied` for patterns used
+2. Exclude entries whose validity condition is triggered or whose source fingerprint is stale
+3. For each valid entry, check `what_to_look_for` against current prompt
+4. Return relevant entries with relevance scores and provenance
+
+Retrieval is read-only. It records proposed entry IDs in the prompt-analysis result; it does not increment counters or write the knowledge file.
 
 ### Storage
 
-After comparison (if structural improvement found):
+After a comparison and user feedback confirm how an entry affected execution:
 1. Evaluate against extraction criteria
 2. Generate candidate entries
 3. Check for duplicates
-4. Apply capacity management
-5. Write updated knowledge base
-6. Update metadata
+4. Increment `times_applied` for each valid entry whose use is confirmed by the report
+5. Revalidate source fingerprints and validity conditions
+6. Apply capacity management
+7. Write updated knowledge base
+8. Update metadata
 
 ## Example Entry
 
@@ -119,12 +134,15 @@ After comparison (if structural improvement found):
 patterns:
   - name: "TypeScript interface reference"
     what_to_look_for: |
-      Code generation prompts creating TypeScript types without
-      referencing existing type definitions in src/types/
+      Code generation prompts creating TypeScript types without referencing existing type definitions in src/types/
     improvement: |
-      Add: "Reference existing types in src/types/ to maintain
-      consistency and avoid duplicate type definitions"
+      Add: "Reference existing types in src/types/ to maintain consistency and avoid duplicate type definitions"
     learned_from: "2026-01-14: Comparison showed better type reuse"
+    source: "comparison: cmp-20260114-types"
+    source_fingerprint: "git:abc123:src/types"
+    validity_scope: "TypeScript generation under src/"
+    last_verified: "2026-01-14T12:00:00Z"
+    invalidated_when: "src/types is removed or its public type policy changes"
     confidence: 0.7
     times_applied: 3
 ```

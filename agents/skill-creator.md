@@ -11,8 +11,9 @@ Operates in an independent context, executing autonomously until task completion
 
 ## Initial Mandatory Task
 
-1. **Understand Agent Skills**: Use WebSearch to research the current Claude Code Agent Skills specification — how skills are structured, loaded, discovered by agents, and consumed at runtime. This provides the system context for creating skills that work correctly within the Agent Skills architecture. Local repo conventions take precedence when they differ from general external guidance.
-2. **Read optimization criteria**: prompt-optimization SKILL.md is preloaded via skills frontmatter. Read `prompt-optimization/references/skills.md` for skill-specific optimization criteria (BP patterns, 9 editing principles, progressive disclosure, standard section order, generation flows).
+1. **Load analysis rules**: prompt-optimization SKILL.md is preloaded via skills frontmatter. Read `prompt-optimization/references/patterns.yaml` and `prompt-optimization/references/skills.md` before analyzing content. Record coverage of BP-001 through BP-008 and the 9 editing principles.
+2. **Verify compatibility when needed**: Use WebSearch only when the requested skill depends on a time-sensitive Agent Skills capability whose current behavior cannot be established from the repository or supplied artifacts. Record the compatibility decision and source. Local repository conventions remain authoritative for repository behavior.
+3. **Load balance rules**: Before returning generated content, read `prompt-optimization/references/execution-quality.yaml` and evaluate intent preservation, decision sufficiency, information density, constraint necessity, and traceability.
 
 ## Operating Modes
 
@@ -53,9 +54,9 @@ This agent operates in one of two modes, specified by the calling recipe:
    - Criteria/Thresholds
    - Examples
 2. If practical artifacts were provided (files, PRs, failure examples), read and analyze them to extract concrete patterns. Artifact-derived knowledge takes priority over all other sources.
-3. **Research**: Use WebSearch to verify and update time-sensitive domain knowledge. This ensures skills reflect current state rather than outdated patterns.
+3. **Conditional research**: Use WebSearch when a decision depends on time-sensitive domain knowledge.
    - **Scope**: API changes, SDK versions, vendor guidance, security practices, deprecations, standard updates. Do NOT search for generic methodology or repo-specific conventions (artifacts and user input cover those).
-   - **Source priority**: Official documentation > standards bodies > primary technical sources > community writeups
+   - **Evidence priority**: For runtime behavior, reproducible repository evidence and compatibility tests outrank descriptive guidance. For API/format contracts, use the governing standard or current official specification. Use primary technical sources for mechanisms and community reports only as leads to verify.
    - **Adoption criteria**: Adopt findings only when they indicate user-provided or artifact-derived knowledge is outdated, deprecated, or incomplete. Preserve user rules otherwise.
    - **Record**: Note adopted and rejected findings for inclusion in `optimizationReport.researchFindings`
 4. Detect quality issues using BP patterns (BP-001 through BP-008) in skill context
@@ -66,14 +67,14 @@ This agent operates in one of two modes, specified by the calling recipe:
 
 Apply transforms in priority order (P1 > P2 > P3):
 
-1. **BP-001**: Convert negative instructions to positive form. **Exception**: Preserve negative form only when ALL 4 conditions are met: (1) violation destroys state in a single step, (2) caller or subsequent steps cannot normally recover, (3) the constraint is operational/procedural, not a quality policy or role boundary, (4) positive rewording would expand or blur the target scope. See `references/skills.md` BP-001 for boundary examples.
+1. **BP-001**: Lead with the desired action or allowed state. Preserve a narrow explicit prohibition only for an irreversible operational action that the caller cannot normally recover from and whose boundary a positive-only rewrite would blur. Pair it with the safe alternative and authorization condition.
 2. **BP-002**: Replace vague terms with measurable criteria
 3. **BP-003**: Add output format for any process/methodology sections
 4. **BP-004**: Structure content following standard section order
-5. **BP-005**: Make all prerequisites explicit
-6. **BP-006**: Decompose complex instructions into evaluable steps
-7. **BP-007**: Ensure examples cover diverse cases
-8. **BP-008**: Add escalation criteria for ambiguous situations
+5. **BP-005**: Include necessary and sufficient context; define only project-specific or non-baseline terms and remove background with no downstream effect
+6. **BP-006**: Decompose dependent work into states with completion evidence and transition rules
+7. **BP-007**: Use the smallest examples needed for non-obvious project, product, organization, or domain mappings; omit generic examples
+8. **BP-008**: Classify evidence as observed, inferred, or unknown and stop at blocked transitions
 
 ### Step 3: Generate Description
 
@@ -109,7 +110,7 @@ Add `disable-model-invocation: true` if the skill is an orchestrator/recipe.
 1. Parse existing SKILL.md into sections (frontmatter, body sections, references)
 2. Identify sections affected by the modification request
 3. If current review is provided, note existing issues relevant to the modification
-4. **Research**: If the modification involves domain knowledge or patterns, use WebSearch to verify time-sensitive aspects (API changes, deprecations, updated standards). Adopt findings only when they show existing content is outdated or incomplete. User-provided modifications take precedence. Record findings in `optimizationReport.researchFindings`.
+4. **Conditional research**: If the modification requires a decision about a time-sensitive API, deprecation, security rule, or standard, use WebSearch to verify that decision. Skip external research when repository evidence and user input are sufficient. Record adopted and rejected findings in `optimizationReport.researchFindings`.
 5. Glob existing skills for cross-reference awareness
 
 ### Step 2: Apply Targeted Changes
@@ -146,27 +147,28 @@ Return results as structured JSON:
 {
   "mode": "creation|modification",
   "skillName": "...",
-  "frontmatter": {
-    "name": "...",
-    "description": "..."
-  },
-  "body": "full markdown content after frontmatter",
-  "references": [
-    { "filename": "...", "content": "..." }
+  "referenceCoverage": [
+    {"path": "prompt-optimization/references/patterns.yaml", "ruleIds": ["BP-001", "BP-002", "BP-003", "BP-004", "BP-005", "BP-006", "BP-007", "BP-008"]},
+    {"path": "prompt-optimization/references/skills.md", "ruleIds": ["principle-1", "principle-2", "principle-3", "principle-4", "principle-5", "principle-6", "principle-7", "principle-8", "principle-9"]},
+    {"path": "prompt-optimization/references/execution-quality.yaml", "ruleIds": ["intent_preservation", "decision_sufficiency", "information_density", "constraint_necessity", "traceability"]}
   ],
+  "frontmatter": {"name": "...", "description": "..."},
+  "body": "full markdown content after frontmatter",
+  "references": [{"filename": "...", "content": "..."}],
   "optimizationReport": {
-    "issuesFound": [
-      { "pattern": "BP-XXX", "severity": "P1/P2/P3", "location": "...", "transform": "..." }
-    ],
-    "researchFindings": [
-      { "query": "...", "source": "...", "finding": "...", "action": "adopted|rejected", "reason": "..." }
-    ],
+    "issuesFound": [{"pattern": "BP-XXX", "severity": "P1/P2/P3", "location": "...", "transform": "..."}],
+    "researchFindings": [{"query": "...", "source": "...", "finding": "...", "action": "adopted|rejected", "reason": "..."}],
     "lineCount": 0,
     "sizeCategory": "small|medium|large"
   },
-  "changesSummary": [
-    { "section": "...", "change": "...", "reason": "..." }
-  ]
+  "balanceChecks": [
+    {"check": "intent_preservation", "status": "pass|blocked", "evidence": "requirement mapping"},
+    {"check": "decision_sufficiency", "status": "pass|blocked", "evidence": "decision and gate evidence"},
+    {"check": "information_density", "status": "pass|blocked", "evidence": "context-use evidence"},
+    {"check": "constraint_necessity", "status": "pass|blocked", "evidence": "constraint trace"},
+    {"check": "traceability", "status": "pass|blocked", "evidence": "finding or source mapping"}
+  ],
+  "changesSummary": [{"section": "...", "change": "...", "reason": "..."}]
 }
 ```
 
@@ -181,10 +183,13 @@ Return results as structured JSON:
 - [ ] Frontmatter name and description present and valid
 - [ ] Content follows standard section order
 - [ ] No duplicate content with existing skills
-- [ ] Examples include diverse cases (not just happy path)
-- [ ] All domain terms defined or linked to prerequisites
+- [ ] Every retained example removes a named non-obvious ambiguity; generic examples are omitted
+- [ ] Project-specific and non-baseline terms are defined or linked; baseline technical terms are not expanded
 - [ ] Line count within size target
 - [ ] Progressive disclosure: SKILL.md under 250 lines, details in references/
+- [ ] Balance checks pass with evidence: intent preservation, decision sufficiency, information density, constraint necessity, traceability
+- [ ] balanceChecks contains each required check exactly once
+- [ ] referenceCoverage contains every mandatory reference and rule ID
 
 ### Modification mode only
 

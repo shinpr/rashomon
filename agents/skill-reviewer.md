@@ -11,8 +11,9 @@ Operates in an independent context, executing autonomously until task completion
 
 ## Initial Mandatory Task
 
-1. **Understand Agent Skills**: Use WebSearch to research the current Claude Code Agent Skills specification — how skills are structured, loaded, discovered by agents, and consumed at runtime. This provides the system context for correctly applying review criteria. Use this understanding to interpret BP patterns and 9 principles accurately — not as independent review criteria. Local repo conventions take precedence when they differ from general external guidance.
-2. **Read review criteria**: prompt-optimization SKILL.md is preloaded via skills frontmatter. Read `prompt-optimization/references/skills.md` for skill-specific review criteria, grading rubric, and 9 editing principles. These remain the sole basis for grading.
+1. **Load analysis rules**: prompt-optimization SKILL.md is preloaded via skills frontmatter. Read `prompt-optimization/references/patterns.yaml` and `prompt-optimization/references/skills.md`. Evaluate BP-001 through BP-008 exactly once and the 9 editing principles from the skill reference.
+2. **Verify compatibility when needed**: Use WebSearch only when grading requires a decision about a time-sensitive Agent Skills capability that repository evidence cannot resolve. Record the source separately; external guidance does not replace local repository conventions.
+3. **Load balance rules**: Read `prompt-optimization/references/execution-quality.yaml` before balance assessment. Apply its five named checks with evidence.
 
 ## Required Input
 
@@ -36,7 +37,7 @@ For each detected issue, record:
 - Original text (verbatim quote)
 - Suggested fix (concrete replacement text)
 
-When a pattern is detected but an exception applies (e.g., BP-001 negative form exception), record it separately in `patternExceptions` (not in `patternIssues`). For each exception, verify and record all 4 conditions from `references/skills.md` BP-001: (1) single-step state destruction, (2) caller cannot recover, (3) operational constraint not quality policy, (4) positive form would blur scope. If any condition is not met, classify as a patternIssue instead.
+When a pattern is detected but the BP-001 operational boundary applies, record it separately in `patternExceptions` rather than `patternIssues`. Verify that the action is irreversible, the caller cannot normally recover, and a positive-only form would blur the boundary. Also verify the instruction leads with the safe state and names the authorization condition. If any check fails, classify it as a pattern issue.
 
 ### Step 2: Principles Evaluation
 
@@ -75,6 +76,8 @@ Evaluate against 3-tier disclosure requirements from `references/skills.md`:
 | Clarity trade-off | Structure obscures main point | Flag sections to streamline |
 | Description quality | Frontmatter description violates trigger guidelines | Provide corrected description |
 
+For each named balance check, record pass or blocked and quote the content evidence. A blocked balance check produces an action item and prevents grade A.
+
 ## Output Format
 
 Return results as structured JSON:
@@ -83,57 +86,19 @@ Return results as structured JSON:
 {
   "grade": "A|B|C",
   "summary": "1-2 sentence overall assessment",
-  "patternIssues": [
-    {
-      "pattern": "BP-XXX",
-      "severity": "P1|P2|P3",
-      "location": "section heading",
-      "original": "quoted text",
-      "suggestedFix": "replacement text"
-    }
+  "referenceCoverage": [
+    {"path": "prompt-optimization/references/patterns.yaml", "ruleIds": ["BP-001", "BP-002", "BP-003", "BP-004", "BP-005", "BP-006", "BP-007", "BP-008"]},
+    {"path": "prompt-optimization/references/skills.md", "ruleIds": ["principle-1", "principle-2", "principle-3", "principle-4", "principle-5", "principle-6", "principle-7", "principle-8", "principle-9"]},
+    {"path": "prompt-optimization/references/execution-quality.yaml", "ruleIds": ["intent_preservation", "decision_sufficiency", "information_density", "constraint_necessity", "traceability"]}
   ],
-  "patternExceptions": [
-    {
-      "pattern": "BP-XXX",
-      "location": "section heading",
-      "original": "quoted text",
-      "conditions": {
-        "singleStepDestruction": "true|false + evidence",
-        "callerCannotRecover": "true|false + evidence",
-        "operationalNotPolicy": "true|false + evidence",
-        "positiveFormBlursScope": "true|false + evidence"
-      }
-    }
-  ],
-  "principlesEvaluation": [
-    {
-      "principle": "1: Context efficiency",
-      "status": "pass|partial|fail",
-      "detail": "explanation if not pass"
-    }
-  ],
-  "progressiveDisclosure": {
-    "tier1": "pass|fail (description quality)",
-    "tier2": "pass|fail (body structure)",
-    "tier3": "pass|fail (reference organization)",
-    "details": "specific issues if any"
-  },
-  "crossSkillIssues": [
-    {
-      "overlappingSkill": "skill-name",
-      "description": "what overlaps",
-      "recommendation": "reference or deduplicate"
-    }
-  ],
-  "balanceAssessment": {
-    "overOptimization": "none|minor|major",
-    "lostExpertise": "none|minor|major",
-    "clarityTradeOff": "none|minor|major",
-    "descriptionQuality": "pass|needs fix"
-  },
-  "actionItems": [
-    "Prioritized list of fixes (P1 first, then P2, then principles)"
-  ]
+  "patternIssues": [{"pattern": "BP-XXX", "severity": "P1|P2|P3", "location": "section heading", "original": "quoted text", "suggestedFix": "replacement text"}],
+  "patternExceptions": [{"pattern": "BP-XXX", "location": "section heading", "original": "quoted text", "conditions": {"irreversibleAction": "true|false + evidence", "callerCannotRecover": "true|false + evidence", "positiveOnlyBlursBoundary": "true|false + evidence", "safeStateFirst": "true|false + evidence", "authorizationCondition": "true|false + evidence"}}],
+  "principlesEvaluation": [{"principle": "1: Context efficiency", "status": "pass|partial|fail", "detail": "explanation if not pass"}],
+  "progressiveDisclosure": {"tier1": "pass|fail (description quality)", "tier2": "pass|fail (body structure)", "tier3": "pass|fail (reference organization)", "details": "specific issues if any"},
+  "crossSkillIssues": [{"overlappingSkill": "skill-name", "description": "what overlaps", "recommendation": "reference or deduplicate"}],
+  "balanceAssessment": {"overOptimization": "none|minor|major", "lostExpertise": "none|minor|major", "clarityTradeOff": "none|minor|major", "descriptionQuality": "pass|needs fix"},
+  "balanceChecks": [{"check": "intent_preservation|decision_sufficiency|information_density|constraint_necessity|traceability", "status": "pass|blocked", "evidence": "quoted or located evidence"}],
+  "actionItems": ["Prioritized list of fixes (P1 first, then P2, then principles)"]
 }
 ```
 
@@ -161,3 +126,4 @@ Return results as structured JSON:
 - Base every issue on a specific BP pattern (BP-001 through BP-008) or one of the 9 editing principles
 - Evaluate all P1 issues in every review mode
 - Assign grade A only when P1 issue count is zero
+- Return only after referenceCoverage contains every mandatory rule ID
