@@ -87,7 +87,7 @@ Present combined results to user:
 | Scenario | Behavior |
 |----------|----------|
 | User cancels during Phase A | Stop. No eval needed. |
-| Grade C after 2 iterations | Present content with issues. User decides: accept/revise/abort. |
+| Grade C after 2 repair/re-review iterations | Present content with remaining findings. User decides: accept/revise/abort. |
 | One executor fails in Phase B | Preserve diagnostics, mark comparison `inconclusive`, and make no winner or effectiveness recommendation. |
 | Both executors fail in Phase B | Report failure. Phase A result still valid. |
 | Worktree creation fails | Report git error. Phase A result still valid. |

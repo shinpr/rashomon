@@ -1,7 +1,7 @@
 {
   "name": "rashomon",
-  "version": "0.4.2",
-  "description": "Evaluate prompts and skills through parallel execution comparison in git worktrees. Prompt optimization with BP-001~008 patterns, skill creation/update with quality grading, and blind A/B evaluation.",
+  "version": "0.5.0",
+  "description": "Evaluate prompts and skills through parallel execution comparison in git worktrees. Prompt optimization with BP-001~009 patterns, skill creation/update with quality grading, and blind A/B evaluation.",
   "author": {
     "name": "Shinsuke Kagawa",
     "url": "https://github.com/shinpr"
@@ -21,7 +21,7 @@
   "interface": {
     "displayName": "Rashomon",
     "shortDescription": "Prompt and skill evaluation through parallel comparison.",
-    "longDescription": "Evaluates prompts and skills through parallel execution in isolated git worktrees. Supports prompt optimization with BP-001~008 patterns, skill creation/update with quality grading, and blind A/B comparison.",
+    "longDescription": "Evaluates prompts and skills through parallel execution in isolated git worktrees. Supports prompt optimization with BP-001~009 patterns, skill creation/update with quality grading, and blind A/B comparison.",
     "developerName": "Shinsuke Kagawa",
     "category": "Developer Tools",
     "capabilities": [

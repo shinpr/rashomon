@@ -82,7 +82,7 @@ Based on analysis:
 
 **Add Entry**:
 - When: User provides new project-specific insight
-- Validation: Ensure not covered by standard patterns (BP-001~008)
+- Validation: Ensure not covered by standard patterns (BP-001~009)
 - Confidence: Follow knowledge-base skill "Confidence Assignment" (single feedback: 0.5-0.7 max)
 - Provenance: Record source, source fingerprint, validity scope, last verified time, and invalidation condition
 

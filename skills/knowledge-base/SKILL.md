@@ -59,7 +59,7 @@ metadata:
 
 **ALL conditions must be true**:
 - Optimized prompt showed **structural improvement** (not variance)
-- Improvement is **project-specific** (not explained by BP-001~008)
+- Improvement is **project-specific** (not explained by BP-001~009)
 - Pattern is likely to **recur** in this project
 
 **Confidence Assignment**:
@@ -75,13 +75,13 @@ metadata:
 
 **ALL conditions must be true**:
 - Original had problem **specific to this project**
-- Problem is **project-specific** (beyond standard patterns BP-001~008)
+- Problem is **project-specific** (beyond standard patterns BP-001~009)
 - Problem **likely to recur**
 
 ### Extraction Scope
 
 Save only entries that are:
-- Project-specific (beyond standard best practices BP-001~008)
+- Project-specific (beyond standard best practices BP-001~009)
 - Likely to recur in this project
 - Showing clear effect (structural improvement, confidence ≥ 0.3)
 

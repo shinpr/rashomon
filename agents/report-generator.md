@@ -62,7 +62,7 @@ An inconclusive assessment names no winner.
 
 After reveal:
 
-1. Verify that analysis covers BP-001 through BP-008 and all prompt-optimization gates passed.
+1. Verify that analysis covers BP-001 through BP-009 and all prompt-optimization gates passed.
 2. Join every applied/skipped resolution to exactly one item in `analysis.findings`.
 3. Map repeatable output differences to a finding/change only when textual evidence supports the mapping.
 4. Classify each difference as structural, context addition, expressive, or variance.

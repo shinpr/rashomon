@@ -57,6 +57,10 @@ Present key findings to user:
 
 ## Step 4: Execute Modification
 
+Set both iteration inputs from the same review cycle:
+- Initial modification: use the source skill from Step 1 as the content base and the Step 3 reviewer output as `Current review`.
+- Grade C repair: use the preceding skill-creator output as the content base and the immediately preceding Step 5 reviewer output as `Current review`.
+
 **Agent tool invocation**:
 ```
 subagent_type: rashomon:skill-creator
@@ -64,13 +68,13 @@ description: "Apply skill modifications"
 prompt: |
   Mode: modification
   Skill name: {target skill name}
-  Existing content: {current full SKILL.md content}
+  Existing content: {content base SKILL.md}
   Existing references:
-  {for each file in references/: filename and content}
+  {for each file in content base references/: filename and content}
   {if no references exist: "No reference files"}
   Modification request: {user's change description from Step 2}
   User phrases for description: {non-held-out phrases from Round 2}
-  Current review: {skill-reviewer output from Step 3}
+  Current review: {review selected for this iteration}
 ```
 
 ## Step 5: Review Modified Content
@@ -87,15 +91,22 @@ prompt: |
   Reference files (for Tier 3 evaluation):
   {for each reference file: filename, line count, and content — include both existing and newly generated}
   {if no references exist: "No reference files"}
+
+  Previous review:
+  {prior skill-reviewer output, or "None"}
+
+  Review resolutions:
+  {skill-creator reviewResolutions, or "None"}
 ```
 
-Present grade, patternIssues, principlesEvaluation, and actionItems to user.
+Present grade, findings, and principlesEvaluation to user.
 
 **Decision logic**:
-- Grade A → proceed to Step 6
-- Grade B → re-invoke rashomon:skill-creator with reviewer's `actionItems` and `patternIssues` to fix, then re-review (max 2 iterations total)
-- Grade C → re-invoke rashomon:skill-creator with reviewer's `actionItems` and `patternIssues` (max 2 iterations)
-- Grade C after 2 iterations → present current content with issues list, let user decide
+- Grade A/B → proceed to Step 6 and present remaining Grade B findings as optional notes
+- Grade C → ask rashomon:skill-creator to resolve each finding by `findingId` as `apply`, `decline`, or `user_decision`
+- `apply` → revise and re-review; `decline` → re-review with evidence; `user_decision` → ask the user
+- A reviewer may maintain a declined finding only with new correctness or verifiability evidence; repeated preference is non-blocking
+- Grade C after 2 repair/re-review iterations → present current content with remaining findings, let user decide
 
 ## Step 6: User Review and Write
 

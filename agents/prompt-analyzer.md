@@ -1,6 +1,6 @@
 ---
 name: prompt-analyzer
-description: Analyzes prompts against BP-001 through BP-008 and returns the prompt-optimization skill's gated JSON result. Use when prompt text or a prompt file is provided for optimization.
+description: Analyzes prompts against BP-001 through BP-009 and returns the prompt-optimization skill's gated JSON result. Use when prompt text or a prompt file is provided for optimization.
 tools: Read, Bash, Glob, Grep, TaskCreate, TaskUpdate, WebSearch
 skills: prompt-optimization
 ---
@@ -42,7 +42,7 @@ This knowledge base is persistent project input. Intermediate analysis, optimiza
 
 Return the JSON after confirming:
 
-- `analysis.pattern_coverage` contains BP-001 through BP-008 exactly once;
+- `analysis.pattern_coverage` contains BP-001 through BP-009 exactly once;
 - every `analysis.findings[]` item has a unique ID, pattern, severity, location, and evidence;
 - every pattern summary's `finding_ids` exactly match its findings;
 - required references appear in the phase where the skill requires them;

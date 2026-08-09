@@ -60,7 +60,8 @@ evaluation_criteria:
     decision_sufficiency:
       description: Verify each required decision, action, and check has enough input to execute
       pass_evidence:
-        - Every delegated choice required for the intended outcome has an explicit selection or deterministic decision rule
+        - Reversible choices have the purpose, relevant evidence, and selection criteria needed for judgment
+        - User-owned, irreversible, and machine-consumed decisions have an explicit selection or contract
         - Every ordered step names the evidence that permits the next transition
       blocked_when:
         - The model must guess a project, product, security, or compatibility decision
@@ -86,6 +87,20 @@ evaluation_criteria:
         - A constraint limits a valid solution without protecting a named requirement
         - A BP-002 clarification has no outcome-relevant precision contribution or its constraint cost narrows the original intent
         - Structure or formatting exists only for visual regularity
+
+    work_proportionality:
+      description: Verify that the candidate creates only the work needed for the intended outcome and its proof
+      pass_evidence:
+        - Each added obligation group affects the outcome, a required boundary, a real consumer, or observable proof
+        - Discovery alone does not justify inclusion
+        - No-change, reuse, and evidence-backed decline remain valid
+        - Verification uses the cheapest sufficient observable boundary
+        - Work stops when the intended outcome is observable
+      blocked_when:
+        - A technically valid possibility becomes mandatory without an outcome-relevant effect
+        - Every finding, ambiguity, risk, or alternative must be resolved
+        - A fixed artifact, test lane, mitigation, or decision exists only for a template or reviewer preference
+        - A reversible choice is removed without protecting a named requirement
 
     traceability:
       description: Verify factual additions and changes have inspectable origins
@@ -134,7 +149,7 @@ evaluation_criteria:
     save_as_pattern:
       conditions:
         - Optimized prompt showed clear structural improvement
-        - Improvement is project-specific (not explained by BP-001~008)
+        - Improvement is project-specific (not explained by BP-001~009)
         - Pattern is likely to recur in this project
       confidence_guidance:
         "0.8+": "Multiple comparisons confirmed same pattern"
@@ -144,7 +159,7 @@ evaluation_criteria:
     save_as_anti_pattern:
       conditions:
         - Original prompt had a problem specific to this project
-        - Problem is not covered by standard patterns (BP-001~008)
+        - Problem is not covered by standard patterns (BP-001~009)
         - Problem is likely to recur
 
     do_not_save:
