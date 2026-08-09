@@ -79,6 +79,7 @@ description: "Generate skill content"
 prompt: |
   Mode: creation
   Skill name: {name from Round 5}
+  Existing generated content: {current full SKILL.md and references on repair, or "None"}
   Raw knowledge: {content from Round 4}
   Trigger scenarios: {scenarios from Round 3}
   User phrases: {non-held-out team phrases from Round 3}
@@ -86,6 +87,7 @@ prompt: |
   Decision criteria: {rules from Round 4}
   Practical artifacts: {files, failures, PRs from Round 4, if provided}
   Project-specific value: {details from Round 2}
+  Current review: {skill-reviewer output on repair, or "None"}
 ```
 
 ## Step 4: Review and Fix
@@ -102,13 +104,20 @@ prompt: |
   Reference files (for Tier 3 evaluation):
   {for each reference file: filename, line count, and content}
   {if no references were generated: "No reference files"}
+
+  Previous review (on re-review):
+  {prior skill-reviewer output, or "None"}
+
+  Review resolutions (on re-review):
+  {skill-creator reviewResolutions, or "None"}
 ```
 
 **Decision logic**:
-- Grade A → proceed to Step 5
-- Grade B → re-invoke rashomon:skill-creator with reviewer's `actionItems` and `patternIssues` to fix, then re-review (max 2 iterations total)
-- Grade C → re-invoke rashomon:skill-creator with reviewer's `actionItems` and `patternIssues` (max 2 iterations)
-- Grade C after 2 iterations → present current content with issues list, let user decide
+- Grade A/B → proceed to Step 5 and present remaining Grade B findings as optional notes
+- Grade C → ask rashomon:skill-creator to resolve each finding by `findingId` as `apply`, `decline`, or `user_decision`
+- `apply` → revise and re-review; `decline` → re-review with evidence; `user_decision` → ask the user
+- A reviewer may maintain a declined finding only with new correctness or verifiability evidence; repeated preference is non-blocking
+- Grade C after 2 repair/re-review iterations → present current content with remaining findings, let user decide
 
 Present the final grade and any remaining notes to user.
 

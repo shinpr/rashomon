@@ -191,14 +191,14 @@ Classification is based on:
 - Agreement between blind quality assessment and observable output differences
 
 <details>
-<summary>Quality Patterns (BP-001 through BP-008)</summary>
+<summary>Quality Patterns (BP-001 through BP-009)</summary>
 
-Both skill review and prompt analysis check against 8 common patterns:
+Both skill review and prompt analysis check against 9 common patterns:
 
 | Priority | Issues |
 |----------|--------|
-| **Critical** | Negative instructions ("don't do X"), vague instructions, missing output format |
-| **High Impact** | Unstructured prompts, missing or excess context, complex tasks without gates |
+| **Critical** | Negative instructions, vague instructions, missing output format, unbounded work generation |
+| **High Impact** | Unstructured prompts, missing or excess context, missing or excess procedural control |
 | **Enhancement** | Unnecessary or biased examples, missing uncertainty handling |
 
 ### P1: Critical (Must Fix)
@@ -208,6 +208,7 @@ Both skill review and prompt analysis check against 8 common patterns:
 | BP-001 | Negative Instructions | A prohibition can prime the forbidden behavior without naming the target state | Lead with the desired behavior; retain narrow prohibitions for irreversible actions |
 | BP-002 | Vague Instructions | An outcome-relevant decision has materially different plausible interpretations | Apply the least-restrictive sufficient criterion that preserves valid solutions |
 | BP-003 | Missing Output Format | No format spec leads to inconsistent outputs | Define expected structure: JSON schema, section headers, etc. |
+| BP-009 | Unbounded Work Generation | Technically valid possibilities become unnecessary work | Keep only work required by the outcome, a boundary, a real consumer, or necessary proof |
 
 ### P2: High Impact (Should Fix)
 
@@ -215,7 +216,7 @@ Both skill review and prompt analysis check against 8 common patterns:
 |----|---------|---------|-----|
 | BP-004 | Unstructured Prompt | Wall of text obscures priorities | Apply 4-block pattern: Context / Task / Constraints / Output Format |
 | BP-005 | Missing or Excess Context | Missing facts force guesses; excess facts obscure operative instructions | Supply decision-sufficient context and condense the rest |
-| BP-006 | Complex Task Without Gates | A model can jump past prerequisites to a later result | Break into states with completion evidence and transition conditions |
+| BP-006 | Missing or Excess Procedural Control | Missing gates permit invalid transitions; excess gates prescribe reversible routes | Keep boundary gates and let evidence guide reversible routes |
 
 ### P3: Enhancement (Could Fix)
 
@@ -224,7 +225,7 @@ Both skill review and prompt analysis check against 8 common patterns:
 | BP-007 | Unnecessary or Biased Examples | Generic examples consume context and anchor unrelated details | Use examples only for non-obvious domain or organization-specific mappings |
 | BP-008 | Missing Uncertainty Handling | Unknown inputs have no defined next action | Classify evidence and stop at a gate when required input is unresolved |
 
-Prompt optimization keeps analysis, optimization, and balance state in one gated JSON response.
+Prompt optimization keeps analysis, optimization, and balance state in one invocation. Machine mode returns the gated JSON state; Interactive mode returns the user-facing result.
 It avoids intermediate analysis files, so the skill does not depend on a specific agent or filesystem layout.
 
 </details>

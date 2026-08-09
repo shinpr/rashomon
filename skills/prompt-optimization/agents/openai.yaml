@@ -1,6 +1,6 @@
 interface:
   display_name: "Prompt Optimization"
-  short_description: "Optimize prompts with gated BP-001~008 analysis"
+  short_description: "Optimize prompts with gated BP-001~009 analysis"
   default_prompt: "Use $rashomon:prompt-optimization to analyze and optimize this prompt."
 
 policy:

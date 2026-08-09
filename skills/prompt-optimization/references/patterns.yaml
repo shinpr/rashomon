@@ -58,6 +58,24 @@ patterns:
     improvement: |
       Define only the output shape required for parsing, routing, comparison, or verification. Use the consumer's required structure and representation rather than selecting a format by convention.
 
+  - id: BP-009
+    name: Unbounded Work Generation
+    severity: P1
+
+    what_to_look_for: |
+      Record an issue when a prompt turns discovered considerations or technically valid possibilities into work not required by the intended outcome, an explicit boundary, a real consumer, or the cheapest sufficient proof. Look for:
+      - Every ambiguity, finding, risk, or alternative must be resolved or included
+      - Research breadth determines implementation or document scope
+      - Reversible local choices must be made deterministic
+      - Fixed artifacts, test lanes, mitigations, or approval records lack a named execution effect
+      - No-change, reuse, decline, or an outcome-based stopping condition is unavailable
+
+    why_problematic: |
+      Capable models reliably execute implied obligations. They can either force deterministic closure on every available choice or retain every consideration found during exploration. Both expand scope without improving the required outcome.
+
+    improvement: |
+      Keep only work that changes the intended outcome, protects a required boundary, satisfies a real consumer, or supplies the cheapest sufficient observable proof. Treat discovered items as candidates: apply required items, decline unsupported additions, return outcome-changing decisions to the user, and stop when the required outcome is observable.
+
   # P2: High Impact (Should Fix)
 
   - id: BP-004
@@ -105,24 +123,24 @@ patterns:
       - Keep raw background behind a path or reference when only an extracted fact is needed
 
   - id: BP-006
-    name: Missing Procedural Gates
+    name: Missing or Excess Procedural Control
     severity: P2
 
     what_to_look_for: |
-      Look for prompts with:
-      - 3+ distinct objectives in one instruction
-      - Sequential dependencies not made explicit
-      - No intermediate checkpoints
-      - Multiple dependent actions presented as one step
+      Look for either missing control or unnecessary route prescription:
+      - A later action would be invalid without prerequisite evidence, but no gate exists
+      - An authority, irreversible-action, machine-contract, or completion boundary is implicit
+      - A reversible choice is prescribed as a mandatory route
+      - A gate requires a specific label or artifact despite semantically equivalent evidence
 
     why_problematic: |
-      Without intermediate evidence and transition conditions, a model can jump to a later result while silently skipping prerequisite analysis.
+      Missing control permits invalid transitions. Excess control removes useful judgment and can stop correct work on a predicted route or representation.
 
     improvement: |
-      Break dependent work into ordered steps. Each step names its output evidence and the condition that permits the next step.
+      Keep explicit gates for true semantic dependencies, authority, irreversible actions, machine-consumed contracts, and completion evidence. Otherwise provide the purpose, relevant evidence, and selection criteria, then let the model choose the reversible route.
 
     key_insight: |
-      The goal is externally visible state progression: each step produces evidence that controls whether the next step is valid.
+      Control the boundary and required evidence, not a predicted path between them.
 
   # P3: Enhancement (Could Fix)
 
