@@ -7,274 +7,245 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue" alt="License"></a>
 </p>
 
-**Know whether your skills actually improve agent behavior — not just look different.**
+<p align="center">English | <a href="README.zh-CN.md">简体中文</a></p>
 
-## Why rashomon?
+**Find out whether a skill improves agent behavior before you ship it.**
 
-> Inspired by the *Rashomon effect* — the idea that the same event can produce different outcomes depending on perspective.
-> rashomon makes those differences explicit and comparable.
+A capable model can follow a bad instruction very well. Unnecessary gates become unnecessary stops. Rigid procedures become extra work. Rules written around an older model's limitations can hold back a newer one.
 
-- Built a skill but unsure if it actually changes agent behavior?
-- Iterating on skills and prompts by gut feel instead of evidence?
-- Want repeatable evidence that your changes made things better, not just different?
+In some cases, an agent performs better without the skill.
 
-**rashomon** evaluates skills and prompts through blind comparison — running tasks with and without your changes in isolated environments, then comparing real outputs without knowing which version produced which.
+Rashomon tests that possibility. It runs the same task under a baseline and a changed version, then compares the results without revealing which version produced them. For skills, the result is a `ship`, `revise`, or `reject` recommendation.
 
-### Who Is This For?
+Ready to try it? [Skip to installation.](#installation)
 
-rashomon is designed for:
-- Skill authors who want evidence-based validation
-- Developers using Claude Code daily
-- Teams iterating on complex prompts (coding, analysis, writing)
-- Anyone who wants **evidence**, not vibes, when improving skills and prompts
+## Why this matters now
 
-Not ideal if:
-- You want one-shot prompt rewriting without comparison
+Skills and prompts change how an agent behaves at runtime. An instruction written to compensate for an older model can become redundant or actively harmful as models improve.
 
-## Quick Example
+In one workflow, a generated task included the hard constraint `Do not improvise a workaround`. The executor stopped and escalated even though the smallest valid change fit inside the task. The orchestrator then had to add corrective guidance to the remaining 13 task prompts.
 
-### Skill Evaluation
+An LLM generated that constraint while following Rashomon's own prompt-optimization guidance. With the failed execution available as evidence, a later review followed the same guidance and identified the constraint as the cause. The paired evaluation was not used.
 
-```
-/recipe-eval-skill create
-```
+The fix was not another blanket rule. Generated constraints now require an authoritative source and must leave room for the smallest valid option. See [the resulting change](https://github.com/shinpr/claude-code-workflows/commit/4043a08) and [the wider design problem](https://www.norsica.jp/blog/when-better-models-make-old-agent-workflows-worse).
 
-Creates a skill through interactive dialog, then evaluates effectiveness:
+Review can catch problems visible in an instruction and diagnose failures after they happen. Rashomon pairs that review with execution evidence to answer the remaining question: does the instruction actually improve behavior before it ships?
 
-1. Collects domain knowledge, project-specific rules, and trigger phrases
-2. Generates optimized skill content (graded A/B/C)
-3. Runs up to three valid paired trials with and without the skill,
-   using at most five attempts, then compares the outputs blindly
+## What Rashomon evaluates
 
-**What the evaluation report looks like:**
+| Evaluation | Comparison | Result |
+|------------|------------|--------|
+| New skill | Without the skill vs. with the skill | Whether the skill should ship |
+| Updated skill | Previous version vs. revised version | Whether the revision is an improvement |
+| Prompt | Original vs. optimized prompt | Whether optimization changes execution quality |
 
-```
+Rashomon can also conclude that the original prompt is already sufficient. A rewrite is not treated as an improvement by default.
+
+## How the evidence is produced
+
+The comparison focuses on observable results: correctness, completeness, constraint handling, and behavioral differences that recur across trials.
+
+1. **Analyze the change.** Rashomon checks the skill or prompt for concrete instruction problems.
+2. **Isolate execution.** Each version runs in a separate Git worktree from the same repository state.
+3. **Run paired trials.** Repeated comparisons keep a single lucky result from deciding the outcome.
+4. **Compare blind.** The evaluator judges output quality before learning which result came from which version.
+5. **Make a recommendation.** Skill reports recommend `ship`, `revise`, or `reject`. Prompt reports return `Use optimized`, `Original sufficient`, `Needs refinement`, or `Collect more evidence`.
+
+### Cost and limits
+
+Prompt evaluation stops before paired execution if the original prompt is already sufficient. Otherwise, comparison runs real development tasks:
+
+- Three valid pairs require six task executions.
+- Invalid pairs can trigger retries, up to five total pair attempts and ten task executions.
+
+Skill evaluation uses the same pair limits and also performs quality and trigger checks. These counts cover task executions in the paired comparison; total token use and duration depend on the task and the additional analysis.
+
+Repeated blind trials help distinguish recurring behavior from one-off variance. They do not claim statistical significance or prove causality. Fewer than two valid pairs produce an inconclusive result.
+
+### Example report format
+
+```text
 Skill Quality: Grade A
-- Project-specific rules clearly encoded, no critical issues
+- Project-specific rules are encoded clearly with no critical issues
 
-Trigger Check: pass (loaded through the Skill tool or its SKILL.md file)
+Trigger Check: pass
 
 Execution Effectiveness:
 - Winner: with-skill
 - Assessment: repeatable structural improvement across valid pairs
-- Key difference: Retry constraints and three-stage catch ordering were applied
-  consistently (linked to skill Rules 3 and 6)
+- Key difference: retry constraints and three-stage catch ordering were applied
+  consistently across trials
 
 Recommendation: ship
 ```
 
-```
-/recipe-eval-skill api-error-handling skill's scope needs adjustment
-```
-
-Updates an existing skill, then evaluates old vs new version side by side.
-
-See a real-world example: [I Built a Skill Reviewer. Then I Ran It on Itself.](https://dev.to/shinpr/i-built-a-skill-reviewer-then-i-ran-it-on-itself-4m4j)
-
-### Prompt Evaluation
-
-```
-/recipe-eval-prompt Write a function to sort an array
-```
-
-Analyzes prompt issues, generates an improved version, and runs the original and optimized prompts
-in up to three blind, paired trials. The report highlights differences that recur across trials.
-
-<details>
-<summary>Prompt Evaluation Details</summary>
-
-#### What You Get
-
-**1. Analysis**
-```
-- BP-002 (already satisfied): No consumer requirement selects a language,
-  ordering, or error policy, so those choices remain flexible.
-```
-
-**2. Final Prompt**
-```
-Write a function to sort an array
-```
-
-**Result: Original sufficient** - Rashomon stops before paired execution because no outcome-relevant ambiguity was found.
-
-</details>
+Grade A means ready for use. Grade B is acceptable with noted improvements. Grade C requires revision before use.
 
 ## Installation
 
-> Requires [Claude Code](https://claude.ai/code) (this is a Claude Code plugin)
+Rashomon is a [Claude Code](https://claude.ai/code) plugin.
 
 ```bash
-# 1. Start Claude Code
+# Start Claude Code
 claude
 
-# 2. Install the marketplace
+# Add the marketplace
 /plugin marketplace add shinpr/rashomon
 
-# 3. Install plugin
+# Install Rashomon
 /plugin install rashomon@rashomon
-
-# 4. Restart session (required)
-# Exit and restart Claude Code
 ```
+
+Restart Claude Code after installation.
 
 ## Usage
 
-### Skill Evaluation
+### Create and evaluate a skill
 
-```
+```text
 /recipe-eval-skill create
 ```
 
-Create a new skill and evaluate its effectiveness.
+Rashomon collects the skill's purpose, domain knowledge, project-specific rules, and trigger phrases. It then creates the skill, reviews its quality, and compares agent behavior with and without it.
 
-```
-/recipe-eval-skill my-skill-name what to change
-```
+### Update and evaluate a skill
 
-Update an existing skill and compare old vs new.
-
-### Prompt Evaluation
-
-```
-/recipe-eval-prompt Your prompt here
+```text
+/recipe-eval-skill <skill-name> <what to change>
 ```
 
-From a file:
+For example:
+
+```text
+/recipe-eval-skill api-error-handling skill's scope needs adjustment
 ```
+
+The current and revised versions are evaluated side by side.
+
+### Evaluate a prompt
+
+```text
+/recipe-eval-prompt Add retry handling for HTTP 429 and 503 responses while preserving the client's public API
+```
+
+Rashomon analyzes the prompt, creates an optimized version when needed, and compares the original and optimized executions.
+
+You can also evaluate a prompt stored in a file:
+
+```text
 /recipe-eval-prompt Generate code following this skill: ./prompts/my-skill.md
 ```
 
-For complex tasks that need more time, just mention it in natural language:
-```
-/recipe-eval-prompt Refactor the entire authentication module. This might take a while.
-```
+Rashomon is intended for cases where execution evidence matters. If you only need a one-off rewrite without comparison, the evaluation workflow is probably unnecessary.
 
-## How It Works
+## How results are classified
 
-```
-Skill Evaluation (/recipe-eval-skill)
-    ├── skill-creator (generates/modifies skills)
-    ├── skill-reviewer (grades quality A/B/C)
-    ├── eval-executor (up to 3 valid pairs, sequential within each pair)
-    └── skill-eval-reporter (blind A/B comparison)
+Different output does not necessarily mean better output. Rashomon separates four kinds of change:
 
-Prompt Evaluation (/recipe-eval-prompt)
-    ├── prompt-analyzer (analyzes and optimizes)
-    ├── prompt-executor (up to 3 valid pairs, parallel within each pair)
-    └── report-generator (compares results)
-```
+| Classification | Meaning | Typical decision |
+|----------------|---------|------------------|
+| **Structural** | Accuracy, completeness, or execution quality improved | Use the new version |
+| **Context Addition** | One version had useful project-specific knowledge | Use it when the context is accurate |
+| **Expressive** | Wording changed but the result did not materially improve | Either version is acceptable |
+| **Variance** | The difference is consistent with normal model variation | Keep the original or collect more evidence |
+
+The report considers whether identified issues were resolved, whether required outputs and constraints were handled, and whether the same difference appeared across valid pairs.
 
 <details>
-<summary>Technical Details</summary>
+<summary>Evaluation workflow details</summary>
 
-### Isolated Execution
+### Skill evaluation
 
-rashomon uses **git worktrees** to run both versions in completely separate environments. A worktree is a Git feature that creates independent working directories from the same repository—this ensures the two executions don't interfere with each other.
+```text
+/recipe-eval-skill
+    ├── skill-creator: creates or updates the skill
+    ├── skill-reviewer: grades content quality A, B, or C
+    ├── eval-executor: runs paired trials
+    └── skill-eval-reporter: performs the blind comparison
+```
 
-</details>
+Skill trials run sequentially within each pair.
 
-## Improvement Classification
+### Prompt evaluation
 
-Not all differences are improvements. rashomon classifies results into four categories:
+```text
+/recipe-eval-prompt
+    ├── prompt-analyzer: analyzes and optimizes the prompt
+    ├── prompt-executor: runs paired executions in isolated worktrees
+    └── report-generator: compares results and attributes differences
+```
 
-| Classification | Meaning | Recommendation |
-|---------------|---------|----------------|
-| **Structural** | Real improvement in accuracy, completeness, or quality | Use the new version |
-| **Context Addition** | One version had more project-specific knowledge | Useful if the context is accurate |
-| **Expressive** | Different wording, same substance | Either version is fine |
-| **Variance** | Just normal LLM randomness | Original was already good |
+Prompt trials run in parallel within each pair.
 
-Classification is based on:
-- Whether detected issues were resolved
-- Output completeness and constraint adherence
-- Agreement between blind quality assessment and observable output differences
+### Isolated execution
 
-<details>
-<summary>Quality Patterns (BP-001 through BP-009)</summary>
-
-Both skill review and prompt analysis check against 9 common patterns:
-
-| Priority | Issues |
-|----------|--------|
-| **Critical** | Negative instructions, vague instructions, missing output format, unbounded work generation |
-| **High Impact** | Unstructured prompts, missing or excess context, missing or excess procedural control |
-| **Enhancement** | Unnecessary or biased examples, missing uncertainty handling |
-
-### P1: Critical (Must Fix)
-
-| ID | Pattern | Problem | Fix |
-|----|---------|---------|-----|
-| BP-001 | Negative Instructions | A prohibition can prime the forbidden behavior without naming the target state | Lead with the desired behavior; retain narrow prohibitions for irreversible actions |
-| BP-002 | Vague Instructions | An outcome-relevant decision has materially different plausible interpretations | Apply the least-restrictive sufficient criterion that preserves valid solutions |
-| BP-003 | Missing Output Format | No format spec leads to inconsistent outputs | Define expected structure: JSON schema, section headers, etc. |
-| BP-009 | Unbounded Work Generation | Technically valid possibilities become unnecessary work | Keep only work required by the outcome, a boundary, a real consumer, or necessary proof |
-
-### P2: High Impact (Should Fix)
-
-| ID | Pattern | Problem | Fix |
-|----|---------|---------|-----|
-| BP-004 | Unstructured Prompt | Wall of text obscures priorities | Apply 4-block pattern: Context / Task / Constraints / Output Format |
-| BP-005 | Missing or Excess Context | Missing facts force guesses; excess facts obscure operative instructions | Supply decision-sufficient context and condense the rest |
-| BP-006 | Missing or Excess Procedural Control | Missing gates permit invalid transitions; excess gates prescribe reversible routes | Keep boundary gates and let evidence guide reversible routes |
-
-### P3: Enhancement (Could Fix)
-
-| ID | Pattern | Problem | Fix |
-|----|---------|---------|-----|
-| BP-007 | Unnecessary or Biased Examples | Generic examples consume context and anchor unrelated details | Use examples only for non-obvious domain or organization-specific mappings |
-| BP-008 | Missing Uncertainty Handling | Unknown inputs have no defined next action | Classify evidence and stop at a gate when required input is unresolved |
-
-Prompt optimization keeps analysis, optimization, and balance state in one invocation. Machine mode returns the gated JSON state; Interactive mode returns the user-facing result.
-It avoids intermediate analysis files, so the skill does not depend on a specific agent or filesystem layout.
+Each version runs in its own Git worktree. Changes from one trial cannot affect the other trial's files, and both versions start from the same repository state.
 
 </details>
 
 <details>
-<summary>About Knowledge Base</summary>
+<summary>Prompt and skill quality checks</summary>
 
-## Knowledge Base
+Rashomon checks nine patterns that commonly reduce instruction quality.
 
-rashomon learns from your project over time.
+| Priority | ID | Pattern | What Rashomon looks for |
+|----------|----|---------|-------------------------|
+| Critical | BP-001 | Negative instructions | A prohibition names the failure without defining the desired behavior |
+| Critical | BP-002 | Vague instructions | An outcome-relevant choice has multiple plausible interpretations |
+| Critical | BP-003 | Missing output format | A consumer needs a stable structure that the prompt does not define |
+| Critical | BP-009 | Unbounded work generation | Instructions create work that the outcome does not require |
+| High impact | BP-004 | Unstructured prompt | Important instructions are difficult to distinguish from supporting context |
+| High impact | BP-005 | Missing or excess context | The model must guess, or relevant facts are buried in unrelated detail |
+| High impact | BP-006 | Missing or excess procedural control | Required boundaries are absent, or reversible choices are over-prescribed |
+| Enhancement | BP-007 | Unnecessary or biased examples | Examples consume context or anchor the model to an accidental detail |
+| Enhancement | BP-008 | Missing uncertainty handling | Unknown inputs have no defined next action |
 
-**Location**: `.claude/.rashomon/prompt-knowledge.yaml`
+</details>
 
-**How it works**:
-- Automatically enabled when the file exists
-- Stores project-specific patterns (not generic best practices)
-- Referenced during analysis, updated after comparisons
-- Max 20 entries, lowest-confidence ones removed first
+<details>
+<summary>Project knowledge base</summary>
 
-**Key principle**: Old knowledge isn't automatically removed. Patterns that have worked for a long time are often the most valuable.
+Rashomon can retain project-specific findings in:
+
+```text
+.claude/.rashomon/prompt-knowledge.yaml
+```
+
+The knowledge base:
+
+- is enabled automatically when the file exists;
+- stores project-specific patterns rather than generic advice;
+- informs later analysis and can be updated from comparison results;
+- keeps up to 20 entries and removes the lowest-confidence entries first.
+
+Older knowledge is not removed solely because of age. A stable pattern with repeated support can remain useful.
 
 </details>
 
 <details>
 <summary>Troubleshooting</summary>
 
-## Troubleshooting
-
 ### Leftover worktrees
 
-If rashomon exits unexpectedly, temporary directories might remain:
+If Rashomon exits unexpectedly, temporary worktrees may remain:
 
 ```bash
-# Worktrees are stored in system temp directory
-# Clean up manually if needed:
 rm -rf ${TMPDIR:-/tmp}/worktree-rashomon-*
 ```
 
 ### Timeout issues
 
-For complex prompts that need more time, mention it when invoking:
+Prompt executions use a five-minute timeout by default. Mention that the task needs more time to allow up to 30 minutes:
 
-```
+```text
 /recipe-eval-prompt Complex task here. This might take longer than usual.
 ```
 
+The skill evaluation runner uses a ten-minute timeout per side. These limits are execution ceilings, not estimates of total evaluation time.
+
 ### "Not a git repository" error
 
-rashomon requires a git repository. Initialize one with:
+Rashomon must run inside a Git repository. Initialize one with:
 
 ```bash
 git init
@@ -284,11 +255,11 @@ git init
 
 ## Requirements
 
-- Git 2.5+
-- Python 3.9+
 - Claude Code
-- Must run inside a git repository
+- Git 2.5 or later
+- Python 3.9 or later, used by the skill evaluation runner
+- A Git repository
 
 ## License
 
-MIT
+[MIT](LICENSE)
