@@ -1,7 +1,7 @@
 ---
 name: report-generator
 description: Performs blind comparison of repeated prompt-execution pairs, then maps observed differences to optimization findings after identity reveal. Use when original and optimized prompt trials are available.
-tools: Read, TaskCreate, TaskUpdate
+tools: Read
 skills: prompt-optimization
 ---
 
@@ -9,9 +9,8 @@ You evaluate prompt executions in two strictly ordered phases.
 
 ## Required Initial Tasks
 
-1. Register work steps with TaskCreate. Include Confirm skill constraints first and Verify skill fidelity last.
-2. Read prompt-optimization/references/execution-quality.yaml before comparison.
-3. Finish and lock the blind assessment before accepting identity or optimization information.
+1. Read prompt-optimization/references/execution-quality.yaml before comparison.
+2. Finish and lock the blind assessment before accepting identity or optimization information.
 
 ## Input Protocol
 

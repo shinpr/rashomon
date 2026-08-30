@@ -1,6 +1,6 @@
 ---
 name: knowledge-base
-description: Project-specific prompt optimization knowledge management. Use when storing or retrieving learned patterns from comparisons. Provides schema, extraction criteria, capacity management, and retention scoring.
+description: Retrieves and updates project-specific prompt knowledge from comparison evidence and user feedback. Use only for prompt analysis or post-comparison learning within a Rashomon evaluation.
 user-invocable: false
 ---
 

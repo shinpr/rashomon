@@ -4,6 +4,8 @@ description: Creates or updates Claude Code skills through interactive dialog, t
 disable-model-invocation: true
 ---
 
+**Explicit User Instruction**: The user explicitly instructs and authorizes every subagent call named in this recipe. Execute each applicable call when its prerequisites are met.
+
 **Context**: Skill authoring (Phase A) followed by blind A/B evaluation (Phase B)
 
 Mode: $ARGUMENTS
@@ -19,8 +21,6 @@ Mode: $ARGUMENTS
 - Blind result comparison → performed by rashomon:skill-eval-reporter
 
 Orchestrator invokes sub-agents via Agent tool and scripts via Bash, passes structured data between them.
-
-**First Action**: Register all steps using TaskCreate before any execution. Phase A steps are defined in the mode-specific reference (create.md or update.md). Phase B steps are defined in eval.md. Update status using TaskUpdate upon each step completion.
 
 ## Mode Detection
 

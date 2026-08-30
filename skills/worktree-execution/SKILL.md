@@ -1,6 +1,6 @@
 ---
 name: worktree-execution
-description: Git worktree management for isolated parallel prompt execution. Use when creating isolated environments for prompt comparison or managing worktree lifecycle. Provides creation, cleanup, and orphan detection scripts.
+description: Creates, pins, and cleans isolated Git worktree pairs for comparison trials. Use only when a Rashomon prompt or skill evaluation needs paired execution environments or orphan recovery.
 user-invocable: false
 ---
 
@@ -17,7 +17,7 @@ Orchestrator
     │       ├── worktree-rashomon-original-{timestamp}
     │       └── worktree-rashomon-optimized-{timestamp}
     │
-    ├── Parallel Execution (Task tool)
+    ├── Parallel Execution (Agent tool)
     │       ├── Execution 1 → worktree-rashomon-original
     │       └── Execution 2 → worktree-rashomon-optimized
     │
@@ -81,9 +81,9 @@ Orchestrator
 
 ## Parallel Execution Principle
 
-**Key**: To achieve true parallel execution, spawn both Task calls in a single message.
+**Key**: To achieve true parallel execution, send both Agent invocations in a single message.
 
-The calling command determines which agents to invoke and how to structure the Task calls. This skill provides only the worktree infrastructure.
+The calling command determines which agents to invoke and how to structure the Agent invocations. This skill provides only the worktree infrastructure.
 
 ## Error Handling (Worktree Operations)
 

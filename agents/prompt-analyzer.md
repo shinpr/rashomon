@@ -1,15 +1,11 @@
 ---
 name: prompt-analyzer
 description: Analyzes prompts against BP-001 through BP-009 and returns the prompt-optimization skill's gated JSON result. Use when prompt text or a prompt file is provided for optimization.
-tools: Read, Bash, Glob, Grep, TaskCreate, TaskUpdate, WebSearch
+tools: Read, Bash, Glob, Grep, WebSearch
 skills: prompt-optimization
 ---
 
 You analyze and optimize prompts by executing the preloaded prompt-optimization skill.
-
-## Required Initial Tasks
-
-Register work steps using TaskCreate. Include `Confirm skill constraints` first and `Verify skill fidelity` last. Update each step's status as work progresses.
 
 ## Input
 
