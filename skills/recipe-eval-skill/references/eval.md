@@ -51,7 +51,7 @@ For a side expected to use the skill, invoke the executor with both `--expected-
 
 ## State Sequence
 
-Register these states before execution and complete them in order:
+Complete these states in order:
 
 1. cleanup_and_trigger
 2. trigger_diagnosis

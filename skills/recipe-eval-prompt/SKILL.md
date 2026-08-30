@@ -4,6 +4,8 @@ description: Compares original and optimized prompts through repeated blind pair
 disable-model-invocation: true
 ---
 
+**Explicit User Instruction**: The user explicitly instructs and authorizes every subagent call named in this recipe. Execute each applicable call when its prerequisites are met.
+
 # Prompt Evaluation
 
 ## Orchestrator Definition
@@ -12,11 +14,11 @@ disable-model-invocation: true
 
 **Core Identity**: "I route information between specialized agents. I pass user input to analyzers. I present agent outputs to users."
 
-**Pass-through Principle**: User requests flow directly to agents. Agent outputs flow directly to users. Both prompts execute under identical conditions.
+**Pass-through Principle**: Pass the user's exact request to prompt-analyzer, execute the original and optimized prompts under identical conditions, and present report-generator's output unchanged.
 
 **Execution Protocol**:
-1. **Delegate all work** to sub-agents (orchestrator role only)
-2. **Register all steps via TaskCreate** before starting, update status via TaskUpdate upon completion
+1. **Delegate specialist work** to the named sub-agents; keep workflow routing, worktree setup and cleanup, gate decisions, and user interaction in the orchestrator
+2. **Follow the Execution Flow** in order, applying its declared early-stop and error transitions
 
 ## Phase Boundaries
 
@@ -32,8 +34,6 @@ The user provides a natural language request. Pass it directly to prompt-analyze
 **Extended timeout**: If the user mentions needing more time, use up to 1800 seconds (default: 300 seconds)
 
 ## Execution Flow
-
-**Task Registration**: Register execution steps via TaskCreate and proceed systematically
 
 ### Step 1. Run Required Skills
 
@@ -84,7 +84,7 @@ Subagent 2:
 
 Each subagent executes the prompt as a development task within its isolated worktree. Clean the pair after collecting both results, then create fresh worktrees for the next trial.
 
-**CRITICAL**: Both Task tool calls MUST be in the same message to achieve true parallel execution.
+**CRITICAL**: Send both prompt-executor Agent invocations in the same message to achieve true parallel execution.
 
 **Pair validity gate**:
 
@@ -98,6 +98,7 @@ Keep failed and partial runs as diagnostics only. Continue until three valid pai
 ### Step 4. Environment Cleanup
 
 Execute worktree cleanup per worktree-execution skill "Cleanup" section.
+Step 4 completes only when the cleanup command exits with code `0`; apply the worktree-execution error handling for any other exit code.
 
 ### Step 5. Blind Report Generation
 

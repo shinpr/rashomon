@@ -1,6 +1,6 @@
 ---
 name: prompt-optimization
-description: Analyzes and optimizes prompts using BP-001~009 patterns and a gated 3-step flow. Use when "optimize this prompt", "review prompt quality", "analyze prompt issues", or creating/reviewing rashomon skill content.
+description: Improves LLM-facing context while preserving intent, execution boundaries, and proportional work. Use when creating or reviewing prompts, agent definitions, skill definitions, or other instructions for an LLM.
 ---
 
 # Prompt Optimization Skill
