@@ -121,7 +121,37 @@ You can also evaluate a prompt stored in a file:
 /recipe-eval-prompt Generate code following this skill: ./prompts/my-skill.md
 ```
 
-Rashomon is intended for cases where execution evidence matters. If you only need a one-off rewrite without comparison, the evaluation workflow is probably unnecessary.
+### Use prompt optimization on its own
+
+You do not need to run a paired evaluation every time you create or revise a prompt or skill. After installing the plugin, Claude Code or Codex may use `prompt-optimization` when it is relevant to the task. To make sure its principles are used, invoke it explicitly:
+
+Claude Code:
+
+```text
+/prompt-optimization Create or review this prompt or skill
+```
+
+Codex:
+
+```text
+$rashomon:prompt-optimization Create or review this prompt or skill
+```
+
+`prompt-optimization` does not run paired trials. Use the full evaluation workflow when you need to verify the result through execution.
+
+<details>
+<summary>Install prompt optimization for Codex</summary>
+
+Add the marketplace and install the plugin:
+
+```bash
+codex plugin marketplace add shinpr/rashomon
+codex plugin add rashomon@rashomon
+```
+
+The Codex plugin includes `prompt-optimization` only. Rashomon's `/recipe-eval-skill` and `/recipe-eval-prompt` workflows remain available only in Claude Code.
+
+</details>
 
 ## How results are classified
 
@@ -140,10 +170,10 @@ The report considers whether identified issues were resolved, whether required o
 
 ## Requirements
 
-- Claude Code
-- Git 2.5 or later
-- Python 3.9 or later, used by the skill evaluation runner
-- A Git repository
+- Claude Code for `/recipe-eval-skill` and `/recipe-eval-prompt`
+- Claude Code or Codex for standalone `prompt-optimization`
+- Git 2.5 or later and a Git repository for evaluation workflows
+- Python 3.9 or later for skill evaluation
 
 ## License
 

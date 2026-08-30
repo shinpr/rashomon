@@ -123,7 +123,37 @@ Rashomon 会分析提示词，在需要时生成优化版本，并比较原提�
 /recipe-eval-prompt 请按照这个 Skill 生成代码：./prompts/my-skill.md
 ```
 
-Rashomon 适合那些需要通过实际执行来验证效果的场景。如果只是想一次性改写提示词而不做比较，这套评估流程通常没有必要。
+### 单独使用提示词优化
+
+创建或修改提示词和 Skill 时，不必每次都运行完整的对比评估。安装后，Claude Code 或 Codex 可以根据任务需要调用 `prompt-optimization`。如果希望确保使用这套原则，可以显式调用：
+
+Claude Code：
+
+```text
+/prompt-optimization 创建或审查这个提示词或 Skill
+```
+
+Codex：
+
+```text
+$rashomon:prompt-optimization 创建或审查这个提示词或 Skill
+```
+
+`prompt-optimization` 不会运行配对测试。需要通过实际执行来验证效果时，再使用完整的评估流程。
+
+<details>
+<summary>在 Codex 中安装提示词优化</summary>
+
+添加插件市场并安装 Rashomon：
+
+```bash
+codex plugin marketplace add shinpr/rashomon
+codex plugin add rashomon@rashomon
+```
+
+Codex 插件只包含 `prompt-optimization`。`/recipe-eval-skill` 和 `/recipe-eval-prompt` 仍只能在 Claude Code 中使用。
+
+</details>
 
 ## 结果如何分类
 
@@ -142,10 +172,10 @@ Rashomon 适合那些需要通过实际执行来验证效果的场景。如果�
 
 ## 运行要求
 
-- Claude Code
-- Git 2.5 或更高版本
-- Python 3.9 或更高版本，供 Skill 评估器使用
-- 一个 Git 仓库
+- 使用 `/recipe-eval-skill` 和 `/recipe-eval-prompt` 需要 Claude Code
+- 单独使用 `prompt-optimization` 需要 Claude Code 或 Codex
+- 评估流程需要 Git 2.5 或更高版本和一个 Git 仓库
+- Skill 评估需要 Python 3.9 或更高版本
 
 ## 许可证
 
