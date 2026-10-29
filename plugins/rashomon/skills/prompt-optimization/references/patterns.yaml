@@ -110,13 +110,14 @@ patterns:
     severity: P2
 
     what_to_look_for: |
-      Check whether each decision, action, and verification has the context it needs. Also check for duplicated, distracting, or unactionable context that has no downstream effect.
+      Check whether the information required for each decision, action, and verification is available where it is used and remains associated with the relevant subject. Also check for duplicated, distracting, or unactionable context that has no downstream effect.
 
     why_problematic: |
       Missing context forces assumptions. Excess context competes with operative instructions and makes required evidence harder to retrieve.
 
     improvement: |
       Build necessary and sufficient context:
+      - Derive required context and output content from the decisions, actions, and verification that use them
       - Add an item when removing it would change a decision, action, or verification
       - Name the source for project-specific facts
       - Condense repeated facts into one operative statement
@@ -166,11 +167,14 @@ patterns:
       - Demands an answer regardless of confidence
       - Has no instruction for handling ambiguity
       - Implicitly requires certainty
+      - Changes the governing rule's treatment of missing evidence when applying or checking that rule
 
     why_problematic: |
       Without an evidence threshold and next action, the model must choose between guessing, stopping without useful information, or proceeding on an unstated assumption.
 
     improvement: |
       Define uncertainty handling as an operational rule:
+
+      Preserve the governing rule's treatment of missing evidence wherever that rule is applied or checked. If that treatment is undefined and materially affects the outcome, identify the unresolved decision.
 
       "Classify claims as observed, inferred, or unknown. For unknown inputs that block the next step, stop at the current gate and name the exact evidence or user decision required to continue."
