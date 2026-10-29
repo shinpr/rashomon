@@ -192,7 +192,7 @@ Add structure when the prompt contains multiple instructions, sequential depende
 
 ### BP-005: Context
 
-For each context item, identify the decision, action, or verification it controls. Add missing items that change one of those outcomes. Condense duplicated items and items with no downstream effect.
+For each context item, identify the decision, action, or verification it controls and check that it is available where used and associated with the relevant subject. Add missing items that change one of those outcomes. Condense duplicated items and items with no downstream effect.
 
 ### BP-006: Procedural Control
 

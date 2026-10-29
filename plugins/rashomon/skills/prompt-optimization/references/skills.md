@@ -23,10 +23,10 @@ Skill content serves two distinct roles. Apply BP patterns accordingly:
 | BP-002 Vague Instructions | Record a finding only when a vague term leaves one decision required by the intended outcome and plausible interpretations would materially change execution or verification. Choose the least-restrictive sufficient criterion: the measurable criterion or if-then rule that supplies the required precision while excluding the fewest valid behaviors. Record outcome-relevant precision contribution and constraint cost in the resolution reason. Expressions resolved unambiguously from input context are already satisfied. |
 | BP-003 Missing Output Format | Every process or methodology section defines the output contract required by its consumer. |
 | BP-004 Unstructured Content | Apply standard section order (see below). Skip restructuring if skill is under 30 lines and covers a single topic. |
-| BP-005 Missing or Excess Context | Include the context needed for a decision, action, or verification result. Define project-specific terms and name source paths. Baseline technical knowledge needs no explanation. Condense duplicated background and content with no downstream effect. |
+| BP-005 Missing or Excess Context | Check that required context is available where it is used and remains associated with the relevant subject. Define project-specific terms and name source paths. Baseline technical knowledge needs no explanation. Condense duplicated background and content with no downstream effect. |
 | BP-006 Procedural Control | Keep gates for true dependencies, authority, irreversible actions, machine-consumed contracts, and completion proof. For reversible choices, provide purpose, evidence, and selection criteria without prescribing the route. |
 | BP-007 Unnecessary or Biased Examples | Default to concise rules or consumer-required output shapes for generally known behavior. Add the smallest example set that communicates organization-, product-, or domain-specific mappings, non-obvious exceptions, or boundaries that a rule cannot express. Map every example to the ambiguity it removes. |
-| BP-008 Missing Uncertainty Handling | Classify evidence as observed, inferred, or unknown. Add escalation criteria and explicit stopping conditions when an unknown blocks the next transition. |
+| BP-008 Missing Uncertainty Handling | Preserve the governing rule's treatment of missing evidence in application and review; identify an undefined treatment when it materially affects the outcome. Classify evidence as observed, inferred, or unknown. Add escalation criteria and explicit stopping conditions when an unknown blocks the next transition. |
 | BP-009 Unbounded Work Generation | Treat discovered considerations as candidates. Retain only work required by the outcome, a boundary, a real consumer, or necessary proof; allow no-change, reuse, and evidence-backed decline. |
 
 ## 10 Editing Principles
@@ -162,7 +162,7 @@ Loaded on-demand during execution, only when the agent reaches the relevant step
 
 | Aspect | Creation | Modification |
 |--------|----------|--------------|
-| Scope | All content, comprehensive | Changed sections + regression check |
+| Scope | All content, comprehensive | Changed sections + regression check; when information requirements or meaning change, check affected sources and uses for consistency |
 | BP scan | All 9 patterns | Focus on patterns relevant to changes |
 | Cross-skill check | Full overlap scan | Verify changes did not introduce overlap |
 | Extra check | — | Report issues outside change scope separately |
